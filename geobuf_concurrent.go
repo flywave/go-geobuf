@@ -1,7 +1,7 @@
 package geobuf
 
 import (
-	raw "github.com/flywave/go-geobuf/geobuf_raw"
+	raw "github.com/flywave/go-geobuf/io"
 	geojson "github.com/paulmach/go.geojson"
 )
 

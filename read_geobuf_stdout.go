@@ -3,7 +3,7 @@ package geobuf
 import (
 	"fmt"
 
-	"github.com/flywave/go-geobuf/geobuf_raw"
+	"github.com/flywave/go-geobuf/io"
 
 	"io"
 	"os"
@@ -118,7 +118,7 @@ func BoundingBox_MultiPolygonGeometry(multipolygon [][][][]float64) []float64 {
 func BoundingBox_GeometryCollection(gs []*geojson.Geometry) []float64 {
 	bboxs := [][]float64{}
 	for _, g := range gs {
-		bboxs = append(bboxs, geobuf_raw.Get_BoundingBox(g))
+		bboxs = append(bboxs, io.Get_BoundingBox(g))
 	}
 	return Expand_BoundingBoxs(bboxs)
 }

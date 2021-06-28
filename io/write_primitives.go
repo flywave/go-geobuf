@@ -1,4 +1,4 @@
-package geobuf_raw
+package io
 
 import (
 	"math"

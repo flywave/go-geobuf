@@ -121,7 +121,7 @@ func AddFeatures(geobuf *Writer, feats []string, count int, s time.Time) int {
 					fmt.Println(err, feat)
 				} else {
 					if feat.Geometry != nil {
-						//fmt.Println(ReadFeature(geobuf_raw.WriteFeature(feat)).Geometry)
+						//fmt.Println(ReadFeature(io.WriteFeature(feat)).Geometry)
 						geobuf.WriteFeature(feat)
 					} else {
 						fmt.Println(feat)

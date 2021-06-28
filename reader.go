@@ -4,7 +4,7 @@ import (
 	"bufio"
 	"os"
 
-	"github.com/flywave/go-geobuf/geobuf_raw"
+	"github.com/flywave/go-geobuf/io"
 
 	"bytes"
 	"encoding/gob"
@@ -89,16 +89,16 @@ func (reader *Reader) BytesIndicies() ([]byte, [2]int) {
 }
 
 func (reader *Reader) Feature() *geojson.Feature {
-	return geobuf_raw.ReadFeature(reader.Bytes())
+	return io.ReadFeature(reader.Bytes())
 }
 
 func (reader *Reader) FeatureIndicies() (*geojson.Feature, [2]int) {
 	bytevals, indicies := reader.BytesIndicies()
-	return geobuf_raw.ReadFeature(bytevals), indicies
+	return io.ReadFeature(bytevals), indicies
 }
 
 func ReadFeature(bytevals []byte) *geojson.Feature {
-	return geobuf_raw.ReadFeature(bytevals)
+	return io.ReadFeature(bytevals)
 }
 
 func ReadKeys(bytevals []byte) []string {

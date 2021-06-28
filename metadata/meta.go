@@ -6,7 +6,7 @@ import (
 	"time"
 
 	g "github.com/flywave/go-geobuf"
-	raw "github.com/flywave/go-geobuf/geobuf_raw"
+	raw "github.com/flywave/go-geobuf/io"
 	geojson "github.com/paulmach/go.geojson"
 )
 
@@ -111,5 +111,4 @@ func CreateMetaCSV(buf *g.Reader, outfilecsv string) {
 			fmt.Printf("\rTotal Number of Meta Data Features Completed %d", i)
 		}
 	}
-
 }

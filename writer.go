@@ -4,7 +4,7 @@ import (
 	"bufio"
 	"os"
 
-	"github.com/flywave/go-geobuf/geobuf_raw"
+	"github.com/flywave/go-geobuf/io"
 
 	geojson "github.com/paulmach/go.geojson"
 
@@ -65,7 +65,7 @@ func WriterBuf(bytevals []byte) *Writer {
 }
 
 func (writer *Writer) WriteFeature(feature *geojson.Feature) {
-	bytevals := geobuf_raw.WriteFeature(feature)
+	bytevals := io.WriteFeature(feature)
 
 	bytevals = append(
 		append(
