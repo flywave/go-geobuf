@@ -5,8 +5,7 @@ import (
 	"os"
 
 	"github.com/flywave/go-geobuf/io"
-
-	geojson "github.com/paulmach/go.geojson"
+	"github.com/flywave/go-geom"
 
 	"bytes"
 	"fmt"
@@ -64,7 +63,7 @@ func WriterBuf(bytevals []byte) *Writer {
 	return &Writer{Writer: bufio.NewWriterSize(buffer, writersize), Buffer: buffer, FileBool: false}
 }
 
-func (writer *Writer) WriteFeature(feature *geojson.Feature) {
+func (writer *Writer) WriteFeature(feature *geom.Feature) {
 	bytevals := io.WriteFeature(feature)
 
 	bytevals = append(
@@ -120,7 +119,6 @@ func (writer *Writer) Bytes() []byte {
 
 	if !writer.FileBool {
 		return writer.Buffer.Bytes()
-
 	} else {
 		writer.File.Close()
 		bytevals, _ := ioutil.ReadFile(writer.Filename)

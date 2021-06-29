@@ -1,7 +1,7 @@
 package io
 
 import (
-	geojson "github.com/paulmach/go.geojson"
+	"github.com/flywave/go-geom"
 )
 
 func BoundingBox_Points(pts [][]float64) []float64 {
@@ -109,26 +109,37 @@ func BoundingBox_MultiPolygonGeometry(multipolygon [][][][]float64) []float64 {
 	return Expand_BoundingBoxs(bboxs)
 }
 
-func Get_BoundingBox(g *geojson.Geometry) []float64 {
-	switch g.Type {
-	case "Point":
-		return BoundingBox_PointGeometry(g.Point)
-	case "MultiPoint":
-		return BoundingBox_MultiPointGeometry(g.MultiPoint)
-	case "LineString":
-		return BoundingBox_LineStringGeometry(g.LineString)
-	case "MultiLineString":
-		return BoundingBox_MultiLineStringGeometry(g.MultiLineString)
-	case "Polygon":
-		return BoundingBox_PolygonGeometry(g.Polygon)
-	case "MultiPolygon":
-		return BoundingBox_MultiPolygonGeometry(g.MultiPolygon)
-
+func Get_BoundingBox(g geom.Geometry) []float64 {
+	switch v := g.(type) {
+	case geom.Point:
+		return BoundingBox_PointGeometry(v.Data())
+	case geom.Point3:
+		return BoundingBox_PointGeometry(v.Data())
+	case geom.MultiPoint:
+		return BoundingBox_MultiPointGeometry(v.Data())
+	case geom.MultiPoint3:
+		return BoundingBox_MultiPointGeometry(v.Data())
+	case geom.LineString:
+		return BoundingBox_LineStringGeometry(v.Data())
+	case geom.LineString3:
+		return BoundingBox_LineStringGeometry(v.Data())
+	case geom.MultiLine:
+		return BoundingBox_MultiLineStringGeometry(v.Data())
+	case geom.MultiLine3:
+		return BoundingBox_MultiLineStringGeometry(v.Data())
+	case geom.Polygon:
+		return BoundingBox_PolygonGeometry(v.Data())
+	case geom.Polygon3:
+		return BoundingBox_PolygonGeometry(v.Data())
+	case geom.MultiPolygon:
+		return BoundingBox_MultiPolygonGeometry(v.Data())
+	case geom.MultiPolygon3:
+		return BoundingBox_MultiPolygonGeometry(v.Data())
 	}
 	return []float64{}
 }
 
-func BoundingBox_GeometryCollection(gs []*geojson.Geometry) []float64 {
+func BoundingBox_GeometryCollection(gs []geom.Geometry) []float64 {
 	bboxs := [][]float64{}
 	for _, g := range gs {
 		bboxs = append(bboxs, Get_BoundingBox(g))

@@ -7,7 +7,7 @@ import (
 
 	g "github.com/flywave/go-geobuf"
 	raw "github.com/flywave/go-geobuf/io"
-	geojson "github.com/paulmach/go.geojson"
+	"github.com/flywave/go-geom"
 )
 
 type Meta struct {
@@ -43,12 +43,12 @@ func NewMetaCSV(filename string) *MetaCSV {
 	return metacsv
 }
 
-func (metacsv *MetaCSV) AddMeta(feature *geojson.Feature) {
+func (metacsv *MetaCSV) AddMeta(feature *geom.Feature) {
 	featurestring := MakeMeta(feature).MakeString()
 	metacsv.File.WriteString(featurestring)
 }
 
-func MakeMeta(feature *geojson.Feature) *Meta {
+func MakeMeta(feature *geom.Feature) *Meta {
 	meta := &Meta{}
 	meta.Type = string(feature.Geometry.Type)
 	var total int
@@ -86,7 +86,7 @@ func MakeMeta(feature *geojson.Feature) *Meta {
 	}
 	meta.SizeJSON = len(bytevals)
 	s = time.Now()
-	_, err = geojson.UnmarshalFeature(bytevals)
+	_, err = geom.UnmarshalFeature(bytevals)
 	meta.TimeReadJSON = int(time.Now().Sub(s).Nanoseconds())
 	if err != nil {
 		fmt.Println(err)

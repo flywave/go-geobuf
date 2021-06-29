@@ -7,7 +7,7 @@ import (
 
 type Concurrent struct {
 	Reader       *Reader
-	C            chan *geojson.Feature
+	C            chan *geom.Feature
 	Count        int
 	Limit        int
 	FeatureCount int
@@ -37,19 +37,18 @@ func (con *Concurrent) Next() bool {
 			return false
 		} else {
 			con.Count = 0
-			con.C = make(chan *geojson.Feature)
+			con.C = make(chan *geom.Feature)
 
 			go con.StartProcesses()
 			return true
 		}
-
 	} else {
 		return true
 	}
 	return false
 }
 
-func (con *Concurrent) Feature() *geojson.Feature {
+func (con *Concurrent) Feature() *geom.Feature {
 	con.Count++
 	con.FeatureCount++
 	feature := <-con.C

@@ -5,36 +5,16 @@ import (
 	"os"
 	"testing"
 
-	ld "github.com/murphy214/ld-geojson"
-	geojson "github.com/paulmach/go.geojson"
+	"github.com/flywave/go-geom"
 )
-
-func I() int {
-	ld.Convert_FeatureCollection("test_data/wv.geojson", "test_data/wv_ld.geojson")
-	return 0
-}
-
-var _ = I()
 
 func BenchmarkFeatureCollectionRead(b *testing.B) {
 	b.ReportAllocs()
 
 	for n := 0; n < b.N; n++ {
 		bytevals, _ := ioutil.ReadFile("test_data/wv.geojson")
-		_, _ = geojson.UnmarshalFeatureCollection(bytevals)
+		_, _ = geom.UnmarshalFeatureCollection(bytevals)
 	}
-}
-
-func BenchmarkLineDelimitedGeojsonRead(b *testing.B) {
-	b.ReportAllocs()
-
-	for n := 0; n < b.N; n++ {
-		ldjson := ld.Read_LD_Geojson("test_data/wv_ld.geojson")
-		for ldjson.Next() {
-			ldjson.Feature()
-		}
-	}
-	os.Remove("test_data/wv_ld.geojson")
 }
 
 func BenchmarkGeobufRead(b *testing.B) {

@@ -7,7 +7,7 @@ import (
 	"os"
 	"testing"
 
-	geojson "github.com/paulmach/go.geojson"
+	"github.com/flywave/go-geom"
 )
 
 func DeltaPt(pt []float64, testpt []float64) float64 {
@@ -24,12 +24,12 @@ func TestReadWriteFile(t *testing.T) {
 		fmt.Println(err)
 	}
 
-	fc, err := geojson.UnmarshalFeatureCollection(bytevals)
+	fc, err := geom.UnmarshalFeatureCollection(bytevals)
 	if err != nil {
 		fmt.Println(err)
 	}
 
-	featuremap := map[int]*geojson.Feature{}
+	featuremap := map[int]*geom.Feature{}
 	for _, feature := range fc.Features {
 		featuremap[int(feature.ID.(float64))] = feature
 	}
@@ -87,12 +87,12 @@ func TestReadWriteBuf(t *testing.T) {
 		fmt.Println(err)
 	}
 
-	fc, err := geojson.UnmarshalFeatureCollection(bytevals)
+	fc, err := geom.UnmarshalFeatureCollection(bytevals)
 	if err != nil {
 		fmt.Println(err)
 	}
 
-	featuremap := map[int]*geojson.Feature{}
+	featuremap := map[int]*geom.Feature{}
 	for _, feature := range fc.Features {
 		featuremap[int(feature.ID.(float64))] = feature
 	}
@@ -171,12 +171,12 @@ func TestReadWriteMultiBufFile(t *testing.T) {
 		fmt.Println(err)
 	}
 
-	fc, err := geojson.UnmarshalFeatureCollection(bytevals)
+	fc, err := geom.UnmarshalFeatureCollection(bytevals)
 	if err != nil {
 		fmt.Println(err)
 	}
 
-	featuremap := map[int]*geojson.Feature{}
+	featuremap := map[int]*geom.Feature{}
 	for _, feature := range fc.Features {
 		featuremap[int(feature.ID.(float64))] = feature
 	}
@@ -255,12 +255,12 @@ func TestReadWriteMultiBuf(t *testing.T) {
 		fmt.Println(err)
 	}
 
-	fc, err := geojson.UnmarshalFeatureCollection(bytevals)
+	fc, err := geom.UnmarshalFeatureCollection(bytevals)
 	if err != nil {
 		fmt.Println(err)
 	}
 
-	featuremap := map[int]*geojson.Feature{}
+	featuremap := map[int]*geom.Feature{}
 	for _, feature := range fc.Features {
 		featuremap[int(feature.ID.(float64))] = feature
 	}

@@ -10,10 +10,9 @@ import (
 	"encoding/gob"
 	"fmt"
 
+	"github.com/flywave/go-geom"
+	"github.com/flywave/go-mapbox"
 	"github.com/flywave/go-pbf"
-	m "github.com/murphy214/mercantile"
-	"github.com/murphy214/protoscan"
-	geojson "github.com/paulmach/go.geojson"
 )
 
 type Reader struct {
@@ -88,16 +87,16 @@ func (reader *Reader) BytesIndicies() ([]byte, [2]int) {
 	return reader.Reader.ProtobufIndicies()
 }
 
-func (reader *Reader) Feature() *geojson.Feature {
+func (reader *Reader) Feature() *geom.Feature {
 	return io.ReadFeature(reader.Bytes())
 }
 
-func (reader *Reader) FeatureIndicies() (*geojson.Feature, [2]int) {
+func (reader *Reader) FeatureIndicies() (*geom.Feature, [2]int) {
 	bytevals, indicies := reader.BytesIndicies()
 	return io.ReadFeature(bytevals), indicies
 }
 
-func ReadFeature(bytevals []byte) *geojson.Feature {
+func ReadFeature(bytevals []byte) *geom.Feature {
 	return io.ReadFeature(bytevals)
 }
 
@@ -145,8 +144,8 @@ func ReadBoundingBox(bytevals []byte) []float64 {
 	return bb
 }
 
-func (reader *Reader) ReadAll() []*geojson.Feature {
-	feats := []*geojson.Feature{}
+func (reader *Reader) ReadAll() []*geom.Feature {
+	feats := []*geom.Feature{}
 	for reader.Next() {
 		feats = append(feats, reader.Feature())
 	}
@@ -179,7 +178,7 @@ func (reader *Reader) ReadIndAppend(inds [2]int) []byte {
 	return bytevals
 }
 
-func (reader *Reader) ReadIndFeature(inds [2]int) *geojson.Feature {
+func (reader *Reader) ReadIndFeature(inds [2]int) *geom.Feature {
 	bytevals := make([]byte, inds[1]-inds[0])
 	reader.File.ReadAt(bytevals, int64(inds[0]))
 	return ReadFeature(bytevals)
@@ -239,7 +238,6 @@ func (reader *Reader) CheckMetaData() {
 	} else {
 		reader.Reset()
 	}
-
 }
 
 func (reader *Reader) SubFileSeek(key string) {
