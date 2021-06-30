@@ -52,7 +52,6 @@ func ReaderBuf(bytevals []byte) *Reader {
 	buf := &Reader{Reader: pbf.NewProtobufScanner(buffer), Buf: bytevals, FileBool: false}
 	buf.CheckMetaData()
 	buf.FeatureCount = 0
-
 	return buf
 }
 

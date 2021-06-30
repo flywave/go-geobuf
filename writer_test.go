@@ -12,7 +12,6 @@ var feature, _ = general.UnmarshalFeature([]byte(feature_s))
 
 func Benchmark_Write_Feature_Benchmark_Old(b *testing.B) {
 	b.ReportAllocs()
-
 	for n := 0; n < b.N; n++ {
 		feature.MarshalJSON()
 	}
@@ -20,7 +19,6 @@ func Benchmark_Write_Feature_Benchmark_Old(b *testing.B) {
 
 func Benchmark_Write_Feature_Benchmark_New(b *testing.B) {
 	b.ReportAllocs()
-
 	for n := 0; n < b.N; n++ {
 		io.WriteFeature(feature)
 	}
