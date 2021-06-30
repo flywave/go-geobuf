@@ -66,31 +66,11 @@ func WriterBuf(bytevals []byte) *Writer {
 func (writer *Writer) WriteFeature(feature *geom.Feature) {
 	bytevals := io.WriteFeature(feature)
 
-	bytevals = append(
-		append(
-			[]byte{10}, EncodeVarint(uint64(len(bytevals)))...,
-		),
-		bytevals...)
 	if writer.FileBool {
 		writer.File.Write(bytevals)
 	} else {
 		writer.Writer.Write(bytevals)
 	}
-
-}
-
-func (writer *Writer) Write(bytevals []byte) {
-	bytevals = append(
-		append(
-			[]byte{10}, EncodeVarint(uint64(len(bytevals)))...,
-		),
-		bytevals...)
-	if writer.FileBool {
-		writer.File.Write(bytevals)
-	} else {
-		writer.Writer.Write(bytevals)
-	}
-
 }
 
 func (writer *Writer) WriteRaw(bytevals []byte) {

@@ -242,9 +242,7 @@ func (reader *Reader) CheckMetaData() {
 
 func (reader *Reader) SubFileSeek(key string) {
 	subfile := reader.MetaData.Files[key]
-
 	reader.Seek(subfile.Positions[0])
-
 	reader.SubFileEnd = subfile.Positions[1]
 }
 

@@ -134,16 +134,6 @@ func ReadMultiPolygon(pbf *pbf.Reader, endpos int, lengths []uint64, factor floa
 	return multipolygon
 }
 
-func ReadBoundingBox(pbf *pbf.Reader, factor float64) []float64 {
-	bb := make([]float64, 4)
-	pbf.ReadVarint()
-	bb[0] = float64(ReadSVarintPower(pbf, factor))
-	bb[1] = float64(ReadSVarintPower(pbf, factor))
-	bb[2] = float64(ReadSVarintPower(pbf, factor))
-	bb[3] = float64(ReadSVarintPower(pbf, factor))
-	return bb
-}
-
 func ConvertPt(pt []float64, factor float64, dim int) []int64 {
 	if dim == 2 {
 		newpt := make([]int64, 2)
@@ -164,16 +154,16 @@ func paramEnc(value int64) uint64 {
 	return uint64((value << 1) ^ (value >> 31))
 }
 
-func WritePoint(pbf *pbf.Writer, tag pbf.TagType, pt []float64, factor float64, dim int) {
+func WritePoint(pbf *pbf.Writer, pt []float64, factor float64, dim int) {
 	point := ConvertPt(pt, factor, dim)
 	if dim == 2 {
-		pbf.WritePackedUInt64(tag, []uint64{paramEnc(point[0]), paramEnc(point[1])})
+		pbf.WritePackedUInt64(GEOMETRY_COORDS, []uint64{paramEnc(point[0]), paramEnc(point[1])})
 	} else if dim == 3 {
-		pbf.WritePackedUInt64(tag, []uint64{paramEnc(point[0]), paramEnc(point[1]), paramEnc(point[2])})
+		pbf.WritePackedUInt64(GEOMETRY_COORDS, []uint64{paramEnc(point[0]), paramEnc(point[1]), paramEnc(point[2])})
 	}
 }
 
-func WriteLine(pbf *pbf.Writer, tag pbf.TagType, line [][]float64, factor float64, dim int) {
+func WriteLine(pbf *pbf.Writer, line [][]float64, factor float64, dim int) {
 	west, south, east, north := 180.0, 90.0, -180.0, -90.0
 	newline := make([]uint64, len(line)*dim)
 	deltapt := make([]int64, dim)
@@ -215,7 +205,7 @@ func WriteLine(pbf *pbf.Writer, tag pbf.TagType, line [][]float64, factor float6
 		}
 		oldpt = pt
 	}
-	pbf.WritePackedUInt64(tag, newline)
+	pbf.WritePackedUInt64(GEOMETRY_COORDS, newline)
 }
 
 func MakeLine2(line [][]float64, factor float64, dim int) ([]uint64, []int64) {
@@ -282,11 +272,23 @@ func MakePolygon2(polygon [][][]float64, factor float64, dim int) ([]uint64, []i
 	return geometry, bb
 }
 
-func WriteMultiPolygon(pbf *pbf.Writer, tag pbf.TagType, multipolygon [][][][]float64, factor float64, dim int) []int64 {
+func WriteMultiPolygon(pbf *pbf.Writer, multipolygon [][][][]float64, factor float64, dim int) []int64 {
 	geometry := []uint64{}
 	west, south, east, north := 180.0, 90.0, -180.0, -90.0
 	west, south, east, north = west*factor, south*factor, east*factor, north*factor
 	bb := []int64{int64(west), int64(south), int64(east), int64(north)}
+	l := len(multipolygon)
+
+	if l != 1 {
+		var lengths = []uint64{uint64(l)}
+		for i := 0; i < l; i++ {
+			lengths = append(lengths, uint64(len(multipolygon[i])))
+			for j := 0; j < len(multipolygon[i]); j++ {
+				lengths = append(lengths, uint64(len(multipolygon[i][j])-1))
+			}
+		}
+		pbf.WritePackedUInt64(GEOMETRY_LENGTHS, lengths)
+	}
 
 	for _, polygon := range multipolygon {
 		geometry = append(geometry, uint64(len(polygon)))
@@ -305,13 +307,27 @@ func WriteMultiPolygon(pbf *pbf.Writer, tag pbf.TagType, multipolygon [][][][]fl
 			bb[3] = tempbb[3]
 		}
 	}
-	pbf.WritePackedUInt64(tag, geometry)
+	pbf.WritePackedUInt64(GEOMETRY_COORDS, geometry)
 	return bb
 }
 
-func WritePolygon(pbf *pbf.Writer, tag pbf.TagType, polygon [][][]float64, factor float64, dim int) []int64 {
+func WritePolygon(pbf *pbf.Writer, polygon [][][]float64, factor float64, dim int, closed bool) []int64 {
 	geometry := []uint64{}
 	bb := []int64{}
+	l := len(polygon)
+
+	if l != 1 {
+		lengths := make([]uint64, 0, l)
+		for i := 0; i < l; i++ {
+			limit := 0
+			if closed {
+				limit = 1
+			}
+			lengths = append(lengths, uint64(len(polygon[i])-limit))
+		}
+		pbf.WritePackedUInt64(GEOMETRY_LENGTHS, lengths)
+	}
+
 	for i, cont := range polygon {
 		geometry = append(geometry, uint64(len(cont)*dim))
 
@@ -321,51 +337,6 @@ func WritePolygon(pbf *pbf.Writer, tag pbf.TagType, polygon [][][]float64, facto
 			bb = tmpbb
 		}
 	}
-	pbf.WritePackedUInt64(tag, geometry)
+	pbf.WritePackedUInt64(GEOMETRY_COORDS, geometry)
 	return bb
-}
-
-func WriteBoundingBox(pbf *pbf.Writer, tag pbf.TagType, box []float64, factor float64) {
-	boxs := []uint64{
-		paramEnc(int64(box[0] * factor)),
-		paramEnc(int64(box[1] * factor)),
-		paramEnc(int64(box[2] * factor)),
-		paramEnc(int64(box[3] * factor)),
-	}
-	pbf.WritePackedUInt64(tag, boxs)
-}
-
-func WriteKeyValue(pbf *pbf.Writer, keytag pbf.TagType, key string, valtag pbf.TagType, value interface{}) {
-	pbf.WriteString(keytag, key)
-
-	switch valtag {
-	case 1:
-		if s, ok := value.(string); ok {
-			pbf.WriteString(valtag, s)
-		}
-	case 2:
-		if f, ok := value.(float32); ok {
-			pbf.WriteFloat(valtag, f)
-		}
-	case 3:
-		if d, ok := value.(float64); ok {
-			pbf.WriteDouble(valtag, d)
-		}
-	case 4:
-		if i, ok := value.(int64); ok {
-			pbf.WriteInt64(valtag, i)
-		}
-	case 5:
-		if i, ok := value.(uint64); ok {
-			pbf.WriteUInt64(valtag, i)
-		}
-	case 6:
-		if i, ok := value.(uint64); ok {
-			pbf.WriteUInt64(valtag, i)
-		}
-	case 7:
-		if b, ok := value.(bool); ok {
-			pbf.WriteBool(valtag, b)
-		}
-	}
 }

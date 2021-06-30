@@ -10,13 +10,13 @@ import (
 	"github.com/flywave/go-geom"
 )
 
+var PrecisionError = math.Pow(10.0, -6.0)
+
 func DeltaPt(pt []float64, testpt []float64) float64 {
 	deltax := math.Abs(pt[0] - testpt[0])
 	deltay := math.Abs(pt[1] - testpt[1])
 	return deltax + deltay
 }
-
-var PrecisionError = math.Pow(10.0, -6.0)
 
 func TestReadWriteFile(t *testing.T) {
 	bytevals, err := ioutil.ReadFile("test_data/county.geojson")

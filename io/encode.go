@@ -151,29 +151,35 @@ func writeGeometry(geometry geom.Geometry, writer *pbf.Writer, factor float64, d
 
 	switch g := geometry.(type) {
 	case geom.Point:
-		WritePoint(writer, GEOMETRY_COORDS, g.Data(), factor, dim)
+		WritePoint(writer, g.Data(), factor, dim)
 	case geom.Point3:
-		WritePoint(writer, GEOMETRY_COORDS, g.Data(), factor, dim)
+		WritePoint(writer, g.Data(), factor, dim)
 	case geom.LineString:
-		WriteLine(writer, GEOMETRY_COORDS, g.Data(), factor, dim)
+		WriteLine(writer, g.Data(), factor, dim)
 	case geom.LineString3:
-		WriteLine(writer, GEOMETRY_COORDS, g.Data(), factor, dim)
+		WriteLine(writer, g.Data(), factor, dim)
 	case geom.Polygon:
-		WritePolygon(writer, GEOMETRY_COORDS, g.Data(), factor, dim)
+		WritePolygon(writer, g.Data(), factor, dim, true)
 	case geom.Polygon3:
-		WritePolygon(writer, GEOMETRY_COORDS, g.Data(), factor, dim)
+		WritePolygon(writer, g.Data(), factor, dim, true)
 	case geom.MultiPoint:
-		WriteLine(writer, GEOMETRY_COORDS, g.Data(), factor, dim)
+		WriteLine(writer, g.Data(), factor, dim)
 	case geom.MultiPoint3:
-		WriteLine(writer, GEOMETRY_COORDS, g.Data(), factor, dim)
+		WriteLine(writer, g.Data(), factor, dim)
 	case geom.MultiLine:
-		WritePolygon(writer, GEOMETRY_COORDS, g.Data(), factor, dim)
+		WritePolygon(writer, g.Data(), factor, dim, false)
 	case geom.MultiLine3:
-		WritePolygon(writer, GEOMETRY_COORDS, g.Data(), factor, dim)
+		WritePolygon(writer, g.Data(), factor, dim, false)
 	case geom.MultiPolygon:
-		WriteMultiPolygon(writer, GEOMETRY_COORDS, g.Data(), factor, dim)
+		WriteMultiPolygon(writer, g.Data(), factor, dim)
 	case geom.MultiPolygon3:
-		WriteMultiPolygon(writer, GEOMETRY_COORDS, g.Data(), factor, dim)
+		WriteMultiPolygon(writer, g.Data(), factor, dim)
+	case geom.Collection:
+		for _, geom := range g {
+			writer.WriteMessage(FEATURE_GEOMETRY, func(w *pbf.Writer) {
+				writeGeometry(geom, w, factor, dim)
+			})
+		}
 	}
 }
 
