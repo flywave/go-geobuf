@@ -51,11 +51,17 @@ func (e *Encode) writeDataField(obj interface{}) {
 	}
 	switch g := obj.(type) {
 	case *geom.Feature:
-		e.writeFeature(g)
+		e.writer.WriteMessage(DATA_TYPE_FEATURE, func(w *pbf.Writer) {
+			writeFeature(g, w, e.Keys, e.Factor, e.Dim)
+		})
 	case *geom.FeatureCollection:
-		e.writeFeatureCollection(g)
+		e.writer.WriteMessage(DATA_TYPE_FEATURE_COLLECTION, func(w *pbf.Writer) {
+			writeFeatureCollection(g, w, e.Keys, e.Factor, e.Dim)
+		})
 	case geom.Geometry:
-		e.writeGeometry(g)
+		e.writer.WriteMessage(DATA_TYPE_GEOMETRY, func(w *pbf.Writer) {
+			writeGeometry(g, w, e.Factor, e.Dim)
+		})
 	}
 }
 
@@ -181,10 +187,10 @@ func writeGeometry(geometry geom.Geometry, writer *pbf.Writer, factor float64, d
 	}
 }
 
-func (e *Encode) writeFeature(feature *geom.Feature) {
+func writeFeature(feature *geom.Feature, writer *pbf.Writer, keys map[string]int, factor float64, dim int) {
 	if feature.Geometry != nil {
-		e.writer.WriteMessage(FEATURE_GEOMETRY, func(w *pbf.Writer) {
-			writeGeometry(feature.Geometry, w, e.Factor, e.Dim)
+		writer.WriteMessage(FEATURE_GEOMETRY, func(w *pbf.Writer) {
+			writeGeometry(feature.Geometry, w, factor, dim)
 		})
 	}
 
@@ -193,40 +199,36 @@ func (e *Encode) writeFeature(feature *geom.Feature) {
 		kd := vv.Kind()
 		switch kd {
 		case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64, reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
-			e.writer.WriteUInt64(FEATURE_INTID, uint64(vv.Int()))
+			writer.WriteUInt64(FEATURE_INTID, uint64(vv.Int()))
 		case reflect.String:
-			e.writer.WriteString(FEATURE_ID, vv.String())
+			writer.WriteString(FEATURE_ID, vv.String())
 		}
 	}
 
 	if feature.Properties != nil {
-		e.writeProps(feature.Properties, false)
+		writeProps(feature.Properties, writer, keys, false)
 	}
 	if feature.CRS != nil {
-		e.writeProps(feature.CRS, true)
+		writeProps(feature.CRS, writer, keys, true)
 	}
 }
 
-func (e *Encode) writeGeometry(geometry geom.Geometry) {
-	writeGeometry(geometry, e.writer, e.Factor, e.Dim)
-}
-
-func (e *Encode) writeProps(props map[string]interface{}, isCustom bool) {
+func writeProps(props map[string]interface{}, writer *pbf.Writer, keys map[string]int, isCustom bool) {
 	indexes := make([]int, 0)
 	valueIndex := 0
 
 	for key := range props {
-		e.writer.WriteMessage(pbf.TagType(13), func(w *pbf.Writer) {
+		writer.WriteMessage(pbf.TagType(13), func(w *pbf.Writer) {
 			writeValue(props[key], w)
 		})
-		indexes = append(indexes, e.Keys[key])
+		indexes = append(indexes, keys[key])
 		indexes = append(indexes, valueIndex)
 		valueIndex++
 	}
 	if isCustom {
-		e.writer.WritePackedVarint(pbf.TagType(15), indexes)
+		writer.WritePackedVarint(pbf.TagType(15), indexes)
 	} else {
-		e.writer.WritePackedVarint(pbf.TagType(14), indexes)
+		writer.WritePackedVarint(pbf.TagType(14), indexes)
 	}
 }
 
@@ -260,13 +262,13 @@ func writeValue(value interface{}, writer *pbf.Writer) {
 	}
 }
 
-func (e *Encode) writeFeatureCollection(obj *geom.FeatureCollection) {
+func writeFeatureCollection(obj *geom.FeatureCollection, writer *pbf.Writer, keys map[string]int, factor float64, dim int) {
 	for _, feat := range obj.Features {
-		e.writer.WriteMessage(FEATURE_COLLECTION_FEATURES, func(w *pbf.Writer) {
-			e.writeFeature(feat)
+		writer.WriteMessage(FEATURE_COLLECTION_FEATURES, func(w *pbf.Writer) {
+			writeFeature(feat, w, keys, factor, dim)
 		})
 	}
-	e.writeProps(obj.CRS, true)
+	writeProps(obj.CRS, writer, keys, true)
 }
 
 func WriteFeature(feat *geom.Feature) []byte {

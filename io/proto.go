@@ -207,7 +207,7 @@ func WriteLine(pbf *pbf.Writer, line [][]float64, factor float64, dim int) {
 	pbf.WritePackedUInt64(GEOMETRY_COORDS, newline)
 }
 
-func MakeLine2(line [][]float64, factor float64, dim int, closed bool) ([]uint64, []int64) {
+func MakeLine2(line [][]float64, factor float64, dim int) ([]uint64, []int64) {
 	west, south, east, north := 180.0, 90.0, -180.0, -90.0
 	newline := make([]uint64, len(line)*dim)
 	deltapt := make([]int64, dim)
@@ -215,9 +215,6 @@ func MakeLine2(line [][]float64, factor float64, dim int, closed bool) ([]uint64
 	oldpt := make([]int64, dim)
 
 	for i, point := range line {
-		if closed && i == (len(line)-1) {
-			break
-		}
 		x, y := point[0], point[1]
 		if x < west {
 			west = x
@@ -263,9 +260,9 @@ func MakePolygon2(polygon [][][]float64, factor float64, dim int) ([]uint64, []i
 	geometry := []uint64{}
 	bb := []int64{}
 	for i, cont := range polygon {
-		geometry = append(geometry, uint64(len(cont)*dim))
+		geometry = append(geometry, uint64((len(cont)-1)*dim))
 
-		tmpgeom, tmpbb := MakeLine2(cont, factor, dim, true)
+		tmpgeom, tmpbb := MakeLine2(cont[:len(cont)-1], factor, dim)
 		geometry = append(geometry, tmpgeom...)
 		if i == 0 {
 			bb = tmpbb
@@ -331,9 +328,13 @@ func WritePolygon(pbf *pbf.Writer, polygon [][][]float64, factor float64, dim in
 	}
 
 	for i, cont := range polygon {
-		geometry = append(geometry, uint64(len(cont)*dim))
+		limit := 0
+		if closed {
+			limit = 1
+		}
+		geometry = append(geometry, uint64((len(cont)-limit)*dim))
 
-		tmpgeom, tmpbb := MakeLine2(cont, factor, dim, closed)
+		tmpgeom, tmpbb := MakeLine2(cont[:len(cont)-limit], factor, dim)
 		geometry = append(geometry, tmpgeom...)
 		if i == 0 {
 			bb = tmpbb

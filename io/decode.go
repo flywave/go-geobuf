@@ -20,7 +20,7 @@ type Decode struct {
 }
 
 func NewDecode(reader *pbf.Reader) *Decode {
-	d := &Decode{Keys: make([]string, 0), Dim: 2, Factor: math.Pow(10.0, 7.0), reader: reader}
+	d := &Decode{Keys: make([]string, 0), Dim: 2, Factor: math.Pow(10.0, 6.0), reader: reader}
 	d.reader.ReadFields(readDataField, d, -1)
 	return d
 }
@@ -62,6 +62,8 @@ type readerContext struct {
 	featureCollection *geom.FeatureCollection
 	feature           *geom.Feature
 	geometry          geom.Geometry
+	geomtype          string
+	lengths           []uint64
 	properties        map[string]interface{}
 }
 
@@ -166,20 +168,18 @@ func (d *Decode) readFeature() *geom.Feature {
 
 func readGeometryField(key pbf.TagType, val pbf.WireType, result interface{}, reader *pbf.Reader) {
 	ctx := result.(*readerContext)
-	var geomtype string
-	var lengths []uint64
 	var geometry geom.Geometry
 	if key == GEOMETRY_TYPES && val == pbf.Varint {
-		geomtype = GeometryTypes[reader.ReadVarint()]
+		ctx.geomtype = GeometryTypes[reader.ReadVarint()]
 	}
 	if key == GEOMETRY_LENGTHS && val == pbf.Varint {
-		lengths = reader.ReadPackedUInt64()
+		ctx.lengths = reader.ReadPackedUInt64()
 	}
 	if key == GEOMETRY_COORDS {
 		size := reader.ReadVarint()
 		endpos := reader.Pos + size
 
-		switch geomtype {
+		switch ctx.geomtype {
 		case "Point":
 			if ctx.Dim == 2 {
 				geometry = general.NewPoint(ReadPoint(reader, endpos, ctx.Factor, ctx.Dim))
@@ -194,9 +194,9 @@ func readGeometryField(key pbf.TagType, val pbf.WireType, result interface{}, re
 			}
 		case "Polygon":
 			if ctx.Dim == 2 {
-				geometry = general.NewPolygon(ReadPolygon(reader, endpos, lengths, true, ctx.Factor, ctx.Dim))
+				geometry = general.NewPolygon(ReadPolygon(reader, endpos, ctx.lengths, true, ctx.Factor, ctx.Dim))
 			} else if ctx.Dim == 3 {
-				geometry = general.NewPolygon3(ReadPolygon(reader, endpos, lengths, true, ctx.Factor, ctx.Dim))
+				geometry = general.NewPolygon3(ReadPolygon(reader, endpos, ctx.lengths, true, ctx.Factor, ctx.Dim))
 			}
 		case "MultiPoint":
 			if ctx.Dim == 2 {
@@ -206,16 +206,28 @@ func readGeometryField(key pbf.TagType, val pbf.WireType, result interface{}, re
 			}
 		case "MultiLineString":
 			if ctx.Dim == 2 {
-				geometry = general.NewMultiLineString(ReadPolygon(reader, endpos, lengths, false, ctx.Factor, ctx.Dim))
+				geometry = general.NewMultiLineString(ReadPolygon(reader, endpos, ctx.lengths, false, ctx.Factor, ctx.Dim))
 			} else if ctx.Dim == 3 {
-				geometry = general.NewMultiLineString3(ReadPolygon(reader, endpos, lengths, false, ctx.Factor, ctx.Dim))
+				geometry = general.NewMultiLineString3(ReadPolygon(reader, endpos, ctx.lengths, false, ctx.Factor, ctx.Dim))
 			}
 		case "MultiPolygon":
 			if ctx.Dim == 2 {
-				geometry = general.NewMultiPolygon(ReadMultiPolygon(reader, endpos, lengths, ctx.Factor, ctx.Dim))
+				geometry = general.NewMultiPolygon(ReadMultiPolygon(reader, endpos, ctx.lengths, ctx.Factor, ctx.Dim))
 			} else if ctx.Dim == 3 {
-				geometry = general.NewMultiPolygon3(ReadMultiPolygon(reader, endpos, lengths, ctx.Factor, ctx.Dim))
+				geometry = general.NewMultiPolygon3(ReadMultiPolygon(reader, endpos, ctx.lengths, ctx.Factor, ctx.Dim))
 			}
+		}
+		if ctx.geometry != nil {
+			gc, ok := ctx.geometry.(geom.Collection)
+			if ok {
+				gc = append(gc, geometry)
+			} else {
+				temp := ctx.geometry
+				gc = geom.Collection{temp, geometry}
+				ctx.geometry = gc
+			}
+		} else {
+			ctx.geometry = geometry
 		}
 	}
 	if key == GEOMETRY_GEOMETRYS && val == pbf.Bytes {
@@ -226,18 +238,6 @@ func readGeometryField(key pbf.TagType, val pbf.WireType, result interface{}, re
 	}
 	if key == GEOMETRY_CUSTOM_PROPERTIES {
 		ctx.properties = readProps(reader, ctx, make(map[string]interface{}))
-	}
-	if ctx.geometry != nil {
-		gc, ok := ctx.geometry.(geom.Collection)
-		if ok {
-			gc = append(gc, geometry)
-		} else {
-			temp := ctx.geometry
-			gc = geom.Collection{temp, geometry}
-			ctx.geometry = gc
-		}
-	} else {
-		ctx.geometry = geometry
 	}
 }
 

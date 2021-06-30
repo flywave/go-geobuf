@@ -8,7 +8,7 @@ import (
 	"github.com/flywave/go-geom/general"
 )
 
-var precision = math.Pow(10.0, -7.0)
+var precision = math.Pow(10.0, -6.0)
 
 var feature_s = `{"id":1000001,"type":"Feature","bbox":[-83.647031,33.698307,-83.275933,33.9659119],"geometry":{"type":"MultiPolygon","coordinates":[[[[-83.537385,33.9659119],[-83.5084519,33.931233],[-83.4155119,33.918541],[-83.275933,33.847977],[-83.306619,33.811444],[-83.28034,33.7617739],[-83.29145,33.7343149],[-83.406189,33.698307],[-83.479523,33.802265],[-83.505928,33.81776],[-83.533165,33.820923],[-83.647031,33.9061979],[-83.537385,33.9659119]]],[[[-83.537385,33.9659119],[-83.5084519,33.931233],[-83.4155119,33.918541],[-83.275933,33.847977],[-83.306619,33.811444],[-83.28034,33.7617739],[-83.29145,33.7343149],[-83.406189,33.698307],[-83.479523,33.802265],[-83.505928,33.81776],[-83.533165,33.820923],[-83.647031,33.9061979],[-83.537385,33.9659119]]],[[[-83.537385,33.9659119],[-83.5084519,33.931233],[-83.4155119,33.918541],[-83.275933,33.847977],[-83.306619,33.811444],[-83.28034,33.7617739],[-83.29145,33.7343149],[-83.406189,33.698307],[-83.479523,33.802265],[-83.505928,33.81776],[-83.533165,33.820923],[-83.647031,33.9061979],[-83.537385,33.9659119]]]]},"properties":{"AREA":"13219","COLORKEY":"#03E174","area":"13219","index":1109}}`
 var feature, _ = general.UnmarshalFeature([]byte(feature_s))
@@ -96,7 +96,7 @@ func TestReadWriteMultiLineString(t *testing.T) {
 	newfeature := ReadFeature(bytevals2)
 	if newfeature.Geometry.GetType() == newfeature.Geometry.GetType() {
 		newPoly := newfeature.Geometry.(geom.MultiLine)
-		poly := polygon.Geometry.(geom.MultiLine)
+		poly := multilinestring.Geometry.(geom.MultiLine)
 		for i, ls := range newPoly.Lines() {
 			for j, newpt := range ls.Subpoints() {
 				pt := poly.Lines()[i].Subpoints()[j]
@@ -117,7 +117,7 @@ func TestReadWriteLineString(t *testing.T) {
 	newfeature := ReadFeature(bytevals2)
 	if newfeature.Geometry.GetType() == newfeature.Geometry.GetType() {
 		newPoly := newfeature.Geometry.(geom.LineString)
-		poly := polygon.Geometry.(geom.LineString)
+		poly := linestring.Geometry.(geom.LineString)
 		for i, newpt := range newPoly.Subpoints() {
 			pt := poly.Subpoints()[i]
 			deltax := math.Abs(newpt.X() - pt.X())
@@ -136,7 +136,7 @@ func TestReadWriteMultiPoint(t *testing.T) {
 	newfeature := ReadFeature(bytevals2)
 	if newfeature.Geometry.GetType() == newfeature.Geometry.GetType() {
 		newPoly := newfeature.Geometry.(geom.MultiPoint)
-		poly := polygon.Geometry.(geom.MultiPoint)
+		poly := multipoint.Geometry.(geom.MultiPoint)
 		for i, newpt := range newPoly.Points() {
 			pt := poly.Points()[i]
 			deltax := math.Abs(newpt.X() - pt.X())
@@ -155,7 +155,7 @@ func TestReadWritePoint(t *testing.T) {
 	newfeature := ReadFeature(bytevals2)
 	if newfeature.Geometry.GetType() == newfeature.Geometry.GetType() {
 		newpt := newfeature.Geometry.(geom.Point)
-		pt := polygon.Geometry.(geom.Point)
+		pt := point.Geometry.(geom.Point)
 		deltax := math.Abs(newpt.X() - pt.X())
 		deltay := math.Abs(newpt.Y() - pt.Y())
 		if deltax > precision || deltay > precision {
