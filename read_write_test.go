@@ -49,10 +49,12 @@ func TestReadWriteFile(t *testing.T) {
 		feature := readbuf.Feature()
 		id := int(feature.ID.(int))
 		testfeature := featuremap[id]
-		if testfeature.Geometry.Type == feature.Geometry.Type {
-			for i := range testfeature.Geometry.Polygon {
-				testring := testfeature.Geometry.Polygon[i]
-				ring := feature.Geometry.Polygon[i]
+		if testfeature.Geometry.GetType() == feature.Geometry.GetType() {
+			poly := testfeature.Geometry.(geom.Polygon)
+			fpoly := feature.Geometry.(geom.Polygon)
+			for i := range poly.Sublines() {
+				testring := poly.Data()[i]
+				ring := fpoly.Data()[i]
 				if len(ring) != len(testring) {
 					t.Errorf("Different ring sizes expected %d got %d", len(testring), len(ring))
 				} else {
@@ -65,7 +67,6 @@ func TestReadWriteFile(t *testing.T) {
 						}
 
 					}
-
 				}
 			}
 		} else {
@@ -112,10 +113,12 @@ func TestReadWriteBuf(t *testing.T) {
 		feature := readbuf.Feature()
 		id := int(feature.ID.(int))
 		testfeature := featuremap[id]
-		if testfeature.Geometry.Type == feature.Geometry.Type {
-			for i := range testfeature.Geometry.Polygon {
-				testring := testfeature.Geometry.Polygon[i]
-				ring := feature.Geometry.Polygon[i]
+		if testfeature.Geometry.GetType() == feature.Geometry.GetType() {
+			poly := testfeature.Geometry.(geom.Polygon)
+			fpoly := feature.Geometry.(geom.Polygon)
+			for i := range poly.Sublines() {
+				testring := poly.Data()[i]
+				ring := fpoly.Data()[i]
 				if len(ring) != len(testring) {
 					t.Errorf("Different ring sizes expected %d got %d", len(testring), len(ring))
 				} else {
@@ -217,10 +220,12 @@ func TestReadWriteMultiBufFile(t *testing.T) {
 		feature := bigbufreader.Feature()
 		id := int(feature.ID.(int))
 		testfeature := featuremap[id]
-		if testfeature.Geometry.Type == feature.Geometry.Type {
-			for i := range testfeature.Geometry.Polygon {
-				testring := testfeature.Geometry.Polygon[i]
-				ring := feature.Geometry.Polygon[i]
+		if testfeature.Geometry.GetType() == feature.Geometry.GetType() {
+			poly := testfeature.Geometry.(geom.Polygon)
+			fpoly := feature.Geometry.(geom.Polygon)
+			for i := range poly.Sublines() {
+				testring := poly.Data()[i]
+				ring := fpoly.Data()[i]
 				if len(ring) != len(testring) {
 					t.Errorf("Different ring sizes expected %d got %d", len(testring), len(ring))
 				} else {
@@ -301,10 +306,12 @@ func TestReadWriteMultiBuf(t *testing.T) {
 		feature := bigbufreader.Feature()
 		id := int(feature.ID.(int))
 		testfeature := featuremap[id]
-		if testfeature.Geometry.Type == feature.Geometry.Type {
-			for i := range testfeature.Geometry.Polygon {
-				testring := testfeature.Geometry.Polygon[i]
-				ring := feature.Geometry.Polygon[i]
+		if testfeature.Geometry.GetType() == feature.Geometry.GetType() {
+			poly := testfeature.Geometry.(geom.Polygon)
+			fpoly := feature.Geometry.(geom.Polygon)
+			for i := range poly.Sublines() {
+				testring := poly.Data()[i]
+				ring := fpoly.Data()[i]
 				if len(ring) != len(testring) {
 					t.Errorf("Different ring sizes expected %d got %d", len(testring), len(ring))
 				} else {

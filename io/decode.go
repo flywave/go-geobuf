@@ -9,184 +9,226 @@ import (
 )
 
 type Decode struct {
-	Keys   []string
-	Values []interface{}
-	Dim    int
-	Factor float64
-	reader *pbf.Reader
+	Keys              []string
+	Dim               int
+	Factor            float64
+	reader            *pbf.Reader
+	featureCollection *geom.FeatureCollection
+	feature           *geom.Feature
+	geometry          geom.Geometry
 }
 
 func NewDecode(reader *pbf.Reader) *Decode {
-	d := &Decode{Keys: make([]string, 0), Values: make([]interface{}, 0), Dim: 2, Factor: math.Pow(10.0, 7.0), reader: reader}
-	d.readDataField()
+	d := &Decode{Keys: make([]string, 0), Dim: 2, Factor: math.Pow(10.0, 7.0), reader: reader}
+	d.reader.ReadFields(readDataField, d, -1)
 	return d
 }
 
-func (d *Decode) readDataField() {
-	key, _ := d.reader.ReadTag()
-	for d.reader.Pos < d.reader.Length {
-		if key == DATA_KEYS {
-			d.Keys = append(d.Keys, d.reader.ReadString())
-			key, _ = d.reader.ReadTag()
-		} else if key == DIMENSIONS {
-			d.Dim = d.reader.ReadVarint()
-			key, _ = d.reader.ReadTag()
-		} else if key == PRECISION {
-			d.Factor = math.Pow(10, float64(d.reader.ReadVarint()))
-			key, _ = d.reader.ReadTag()
-		} else if key == DATA_TYPE_FEATURE_COLLECTION {
-			d.readFeatureCollection()
-			key, _ = d.reader.ReadTag()
-		} else if key == DATA_TYPE_FEATURE {
-			d.readFeature()
-			key, _ = d.reader.ReadTag()
-		} else if key == DATA_TYPE_GEOMETRY {
-			d.readGeometry()
-			key, _ = d.reader.ReadTag()
+func readDataField(key pbf.TagType, tp pbf.WireType, res interface{}, reader *pbf.Reader) {
+	d := res.(*Decode)
+	if key == DATA_KEYS {
+		d.Keys = append(d.Keys, d.reader.ReadString())
+	} else if key == DIMENSIONS {
+		d.Dim = d.reader.ReadVarint()
+	} else if key == PRECISION {
+		d.Factor = math.Pow(10, float64(d.reader.ReadVarint()))
+	} else if key == DATA_TYPE_FEATURE_COLLECTION {
+		d.featureCollection = d.readFeatureCollection()
+		bboxs := make([][]float64, 0)
+		for _, feat := range d.featureCollection.Features {
+			bboxs = append(bboxs, Get_BoundingBox(feat.Geometry))
 		}
+		d.featureCollection.BoundingBox = Expand_BoundingBoxs(bboxs)
+	} else if key == DATA_TYPE_FEATURE {
+		d.feature = d.readFeature()
+		d.feature.BoundingBox = Get_BoundingBox(d.feature.Geometry)
+	} else if key == DATA_TYPE_GEOMETRY {
+		d.geometry, _ = d.readGeometry()
 	}
+}
+
+func readFeature(reader *pbf.Reader, ctx *readerContext) *geom.Feature {
+	ctx.feature = &geom.Feature{Properties: map[string]interface{}{}}
+	reader.ReadMessage(readFeatureField, ctx)
+	return ctx.feature
+}
+
+type readerContext struct {
+	Keys              []string
+	Values            []interface{}
+	Dim               int
+	Factor            float64
+	featureCollection *geom.FeatureCollection
+	feature           *geom.Feature
+	geometry          geom.Geometry
+	properties        map[string]interface{}
+}
+
+func readProps(reader *pbf.Reader, ctx *readerContext, props map[string]interface{}) map[string]interface{} {
+	size := reader.ReadVarint()
+	endpos := size + reader.Pos
+
+	for reader.Pos < endpos {
+		props[ctx.Keys[reader.ReadVarint()]] = ctx.Values[reader.ReadVarint()]
+	}
+	return props
+}
+
+func readValue(reader *pbf.Reader, values []interface{}) {
+	size := reader.ReadVarint()
+	endpos := reader.Pos + size
+
+	for reader.Pos < endpos {
+		newkey, _ := reader.ReadTag()
+		switch newkey {
+		case VALUES_STRING_VALUE:
+		case VALUES_JSON_VALUE:
+			values = append(values, reader.ReadString())
+		case VALUES_DOUBLE_VALUE:
+			values = append(values, reader.ReadDouble())
+		case VALUES_POS_INT_VALUE:
+			values = append(values, reader.ReadUInt64())
+		case VALUES_NEG_INT_VALUE:
+			values = append(values, -int64(reader.ReadUInt64()))
+		case VALUES_BOOL_VALUE:
+			values = append(values, reader.ReadBool())
+		}
+		reader.Pos = endpos
+	}
+}
+
+func readFeatureCollectionField(tag pbf.TagType, tp pbf.WireType, result interface{}, reader *pbf.Reader) {
+	ctx := result.(*readerContext)
+	if tag == FEATURE_COLLECTION_FEATURES {
+		fctx := *ctx
+		fctx.feature = &geom.Feature{}
+		ctx.featureCollection.Features = append(ctx.featureCollection.Features, readFeature(reader, &fctx))
+	} else if tag == FEATURE_COLLECTION_VALUES {
+		readValue(reader, ctx.Values)
+	} else if tag == FEATURE_COLLECTION_CUSTOM_PROPERTIES {
+		ctx.properties = readProps(reader, ctx, ctx.properties)
+	}
+}
+
+func (d *Decode) getReaderContext() *readerContext {
+	return &readerContext{Keys: d.Keys, Values: make([]interface{}, 0), Dim: d.Dim, Factor: d.Factor}
 }
 
 func (d *Decode) readFeatureCollection() *geom.FeatureCollection {
-	fc := &geom.FeatureCollection{}
-	fc.Type = "FeatureCollection"
-	d.readFeatures(fc)
-	return fc
+	ctx := d.getReaderContext()
+	ctx.featureCollection = &geom.FeatureCollection{}
+	ctx.featureCollection.Type = "FeatureCollection"
+	d.reader.ReadMessage(readFeatureCollectionField, ctx.featureCollection)
+	return ctx.featureCollection
 }
 
-func (d *Decode) readFeatures(fc *geom.FeatureCollection) {
-
+func readGeometry(reader *pbf.Reader, ctx *readerContext) {
+	reader.ReadMessage(readGeometryField, ctx)
 }
 
-func (d *Decode) readFeature() *geom.Feature {
-	feature := &geom.Feature{Properties: map[string]interface{}{}}
-
-	key, val := d.reader.ReadTag()
+func readFeatureField(key pbf.TagType, val pbf.WireType, result interface{}, reader *pbf.Reader) {
+	ctx := result.(*readerContext)
+	feature := ctx.feature
 	if key == FEATURE_GEOMETRY && val == pbf.Bytes {
-		feature.Geometry, feature.Properties = d.readGeometry()
-		key, val = d.reader.ReadTag()
+		gctx := *ctx
+		gctx.feature = nil
+		readGeometry(reader, &gctx)
+		feature.Geometry, feature.Properties = gctx.geometry, gctx.properties
 	}
 	if key == FEATURE_ID {
-		feature.ID = d.reader.ReadString()
-		key, val = d.reader.ReadTag()
+		feature.ID = reader.ReadString()
 	}
 	if key == FEATURE_INTID {
-		feature.ID = d.reader.ReadVarint()
-		key, val = d.reader.ReadTag()
+		feature.ID = reader.ReadVarint()
 	}
 	for key == FEATURE_UNIQUE_VALUES && val == pbf.Bytes {
-		size := d.reader.ReadVarint()
-		endpos := d.reader.Pos + size
-
-		for d.reader.Pos < endpos {
-			newkey, _ := d.reader.ReadTag()
-			switch newkey {
-			case VALUES_STRING_VALUE:
-			case VALUES_JSON_VALUE:
-				d.Values = append(d.Values, d.reader.ReadString())
-			case VALUES_DOUBLE_VALUE:
-				d.Values = append(d.Values, d.reader.ReadDouble())
-			case VALUES_POS_INT_VALUE:
-			case VALUES_NEG_INT_VALUE:
-				d.Values = append(d.Values, d.reader.ReadUInt64())
-			case VALUES_BOOL_VALUE:
-				d.Values = append(d.Values, d.reader.ReadBool())
-			}
-			d.reader.Pos = endpos
-			key, val = d.reader.ReadTag()
-		}
+		readValue(reader, ctx.Values)
 	}
 	if key == FEATURE_PROPERTIES {
 		if feature.Properties == nil {
 			feature.Properties = make(map[string]interface{})
 		}
-		d.readProps(feature.Properties)
-		key, val = d.reader.ReadTag()
+		feature.Properties = readProps(reader, ctx, feature.Properties)
 	}
 	if key == FEATURE_CUSTOM_PROPERTIES {
-		d.readProps(feature.Properties)
+		feature.Properties = readProps(reader, ctx, feature.Properties)
 	}
-	return feature
 }
 
-func (d *Decode) readGeometry() (geom.Geometry, map[string]interface{}) {
+func (d *Decode) readFeature() *geom.Feature {
+	ctx := d.getReaderContext()
+	ctx.feature = &geom.Feature{Properties: map[string]interface{}{}}
+	d.reader.ReadMessage(readFeatureField, ctx)
+	return ctx.feature
+}
+
+func readGeometryField(key pbf.TagType, val pbf.WireType, result interface{}, reader *pbf.Reader) {
+	ctx := result.(*readerContext)
 	var geomtype string
 	var lengths []uint64
 	var geometry geom.Geometry
-	var properties map[string]interface{}
-	key, val := d.reader.ReadTag()
 	if key == GEOMETRY_TYPES && val == pbf.Varint {
-		geomtype = GeometryTypes[d.reader.ReadVarint()]
-		key, val = d.reader.ReadTag()
+		geomtype = GeometryTypes[reader.ReadVarint()]
 	}
 	if key == GEOMETRY_LENGTHS && val == pbf.Varint {
-		lengths = d.reader.ReadPackedUInt64()
-		key, val = d.reader.ReadTag()
+		lengths = reader.ReadPackedUInt64()
 	}
 	if key == GEOMETRY_COORDS {
-		size := d.reader.ReadVarint()
-		endpos := d.reader.Pos + size
+		size := reader.ReadVarint()
+		endpos := reader.Pos + size
 
 		switch geomtype {
 		case "Point":
-			geometry = general.NewPoint(ReadPoint(d.reader, endpos, d.Factor, d.Dim))
+			geometry = general.NewPoint(ReadPoint(reader, endpos, ctx.Factor, ctx.Dim))
 		case "LineString":
-			geometry = general.NewLineString(ReadLine(d.reader, 0, endpos, d.Factor, d.Dim, false))
+			geometry = general.NewLineString(ReadLine(reader, 0, endpos, ctx.Factor, ctx.Dim, false))
 		case "Polygon":
-			geometry = general.NewPolygon(ReadPolygon(d.reader, endpos, lengths, true, d.Factor, d.Dim))
+			geometry = general.NewPolygon(ReadPolygon(reader, endpos, lengths, true, ctx.Factor, ctx.Dim))
 		case "MultiPoint":
-			geometry = general.NewMultiPoint(ReadLine(d.reader, 0, endpos, d.Factor, d.Dim, false))
+			geometry = general.NewMultiPoint(ReadLine(reader, 0, endpos, ctx.Factor, ctx.Dim, false))
 		case "MultiLineString":
-			geometry = general.NewMultiLineString(ReadPolygon(d.reader, endpos, lengths, false, d.Factor, d.Dim))
+			geometry = general.NewMultiLineString(ReadPolygon(reader, endpos, lengths, false, ctx.Factor, ctx.Dim))
 		case "MultiPolygon":
-			geometry = general.NewMultiPolygon(ReadMultiPolygon(d.reader, endpos, lengths, d.Factor, d.Dim))
+			geometry = general.NewMultiPolygon(ReadMultiPolygon(reader, endpos, lengths, ctx.Factor, ctx.Dim))
 		}
 	}
 	if key == GEOMETRY_GEOMETRYS && val == pbf.Bytes {
+		readGeometry(reader, ctx)
 	}
 	if key == GEOMETRY_VALUES && val == pbf.Bytes {
-		size := d.reader.ReadVarint()
-		endpos := d.reader.Pos + size
-
-		for d.reader.Pos < endpos {
-			newkey, _ := d.reader.ReadTag()
-			switch newkey {
-			case VALUES_STRING_VALUE:
-			case VALUES_JSON_VALUE:
-				d.Values = append(d.Values, d.reader.ReadString())
-			case VALUES_DOUBLE_VALUE:
-				d.Values = append(d.Values, d.reader.ReadDouble())
-			case VALUES_POS_INT_VALUE:
-			case VALUES_NEG_INT_VALUE:
-				d.Values = append(d.Values, d.reader.ReadUInt64())
-			case VALUES_BOOL_VALUE:
-				d.Values = append(d.Values, d.reader.ReadBool())
-			}
-			d.reader.Pos = endpos
-			key, val = d.reader.ReadTag()
-		}
+		readValue(reader, ctx.Values)
 	}
 	if key == GEOMETRY_CUSTOM_PROPERTIES {
-		properties = d.readProps(make(map[string]interface{}))
+		ctx.properties = readProps(reader, ctx, make(map[string]interface{}))
 	}
-
-	return geometry, properties
+	if ctx.geometry != nil {
+		gc, ok := ctx.geometry.(geom.Collection)
+		if ok {
+			gc = append(gc, geometry)
+		} else {
+			temp := ctx.geometry
+			gc = geom.Collection{temp, geometry}
+			ctx.geometry = gc
+		}
+	} else {
+		ctx.geometry = geometry
+	}
 }
 
-func (d *Decode) readFeatureCollectionField() {
-}
-
-func (d *Decode) readProps(props map[string]interface{}) map[string]interface{} {
-	size := d.reader.ReadVarint()
-	endpos := size + d.reader.Pos
-
-	for d.reader.Pos < endpos {
-		props[d.Keys[d.reader.ReadVarint()]] = d.Values[d.reader.ReadVarint()]
-	}
-	d.Values = make([]interface{}, 0)
-	return props
+func (d *Decode) readGeometry() (geom.Geometry, map[string]interface{}) {
+	ctx := d.getReaderContext()
+	d.reader.ReadMessage(readFeatureCollectionField, ctx.featureCollection)
+	return ctx.geometry, ctx.properties
 }
 
 func ReadFeature(bytevals []byte) *geom.Feature {
+	return nil
+}
+
+func ReadFeatureCollection(bytevals []byte) *geom.FeatureCollection {
+	return nil
+}
+
+func ReadGeometry(bytevals []byte) geom.Geometry {
 	return nil
 }

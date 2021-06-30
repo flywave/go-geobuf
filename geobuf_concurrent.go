@@ -2,7 +2,7 @@ package geobuf
 
 import (
 	raw "github.com/flywave/go-geobuf/io"
-	geojson "github.com/paulmach/go.geojson"
+	"github.com/flywave/go-geom"
 )
 
 type Concurrent struct {
@@ -45,7 +45,6 @@ func (con *Concurrent) Next() bool {
 	} else {
 		return true
 	}
-	return false
 }
 
 func (con *Concurrent) Feature() *geom.Feature {

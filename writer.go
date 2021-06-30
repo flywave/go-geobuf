@@ -124,7 +124,6 @@ func (writer *Writer) Bytes() []byte {
 		bytevals, _ := ioutil.ReadFile(writer.Filename)
 		return bytevals
 	}
-	return []byte{}
 }
 
 func (writer *Writer) Reader() *Reader {
@@ -136,7 +135,6 @@ func (writer *Writer) Reader() *Reader {
 		newreader := ReaderFile(writer.Filename)
 		return newreader
 	}
-	return &Reader{}
 }
 
 func (writer *Writer) Close() {

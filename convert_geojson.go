@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/flywave/go-geom"
+	"github.com/flywave/go-geom/general"
 )
 
 type Geojson_File struct {
@@ -95,7 +96,7 @@ func AddFeatures(geobuf *Writer, feats []string, count int, s time.Time) int {
 		wg.Add(1)
 		go func(i string) {
 			if len(i) > 0 {
-				feat, err := geom.UnmarshalFeature([]byte(i))
+				feat, err := general.UnmarshalFeature([]byte(i))
 				if err != nil {
 					fmt.Println(err, feat)
 				} else {

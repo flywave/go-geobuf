@@ -8,6 +8,7 @@ import (
 	g "github.com/flywave/go-geobuf"
 	raw "github.com/flywave/go-geobuf/io"
 	"github.com/flywave/go-geom"
+	"github.com/flywave/go-geom/general"
 )
 
 type Meta struct {
@@ -50,27 +51,49 @@ func (metacsv *MetaCSV) AddMeta(feature *geom.Feature) {
 
 func MakeMeta(feature *geom.Feature) *Meta {
 	meta := &Meta{}
-	meta.Type = string(feature.Geometry.Type)
+	meta.Type = string(feature.Geometry.GetType())
 	var total int
-	switch meta.Type {
-	case "Point":
+	switch g := feature.Geometry.(type) {
+	case geom.Point:
+	case geom.Point3:
 		meta.Verticies = 1
-	case "MultiPoint":
-		meta.Verticies = len(feature.Geometry.MultiPoint)
-	case "LineString":
-		meta.Verticies = len(feature.Geometry.LineString)
-	case "MultiLineString":
-		for _, line := range feature.Geometry.MultiLineString {
+	case geom.MultiPoint:
+		meta.Verticies = len(g.Data())
+	case geom.MultiPoint3:
+		meta.Verticies = len(g.Data())
+	case geom.LineString:
+		meta.Verticies = len(g.Data())
+	case geom.LineString3:
+		meta.Verticies = len(g.Data())
+	case geom.MultiLine:
+		for _, line := range g.Data() {
 			total += len(line)
 		}
 		meta.Verticies = total
-	case "Polygon":
-		for _, line := range feature.Geometry.Polygon {
+	case geom.MultiLine3:
+		for _, line := range g.Data() {
 			total += len(line)
 		}
 		meta.Verticies = total
-	case "MultiPolygon":
-		for _, polygon := range feature.Geometry.MultiPolygon {
+	case geom.Polygon:
+		for _, line := range g.Data() {
+			total += len(line)
+		}
+		meta.Verticies = total
+	case geom.Polygon3:
+		for _, line := range g.Data() {
+			total += len(line)
+		}
+		meta.Verticies = total
+	case geom.MultiPolygon:
+		for _, polygon := range g.Data() {
+			for _, line := range polygon {
+				total += len(line)
+			}
+		}
+		meta.Verticies = total
+	case geom.MultiPolygon3:
+		for _, polygon := range g.Data() {
 			for _, line := range polygon {
 				total += len(line)
 			}
@@ -86,7 +109,7 @@ func MakeMeta(feature *geom.Feature) *Meta {
 	}
 	meta.SizeJSON = len(bytevals)
 	s = time.Now()
-	_, err = geom.UnmarshalFeature(bytevals)
+	_, err = general.UnmarshalFeature(bytevals)
 	meta.TimeReadJSON = int(time.Now().Sub(s).Nanoseconds())
 	if err != nil {
 		fmt.Println(err)

@@ -2,7 +2,7 @@ package io
 
 import "github.com/flywave/go-pbf"
 
-var GeometryTagTypes = map[string]pbf.TagType{
+var GeometryTagTypes = map[string]int{
 	"Point":              0,
 	"MultiPoint":         1,
 	"LineString":         2,

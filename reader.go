@@ -5,19 +5,19 @@ import (
 	"os"
 
 	"github.com/flywave/go-geobuf/io"
+	"github.com/flywave/go-mapbox/tileid"
 
 	"bytes"
 	"encoding/gob"
 	"fmt"
 
 	"github.com/flywave/go-geom"
-	"github.com/flywave/go-mapbox"
 	"github.com/flywave/go-pbf"
 )
 
 type Reader struct {
 	FileBool     bool
-	Reader       *protoscan.ProtobufScanner
+	Reader       *pbf.ProtobufScanner
 	Filename     string
 	File         *os.File
 	Buf          []byte
@@ -37,7 +37,7 @@ type MetaData struct {
 	FileSize       int
 	NumberFeatures int
 	Files          map[string]*SubFile
-	Bounds         m.Extrema
+	Bounds         tileid.Extrema
 }
 
 func (metadata *MetaData) LintMetaData(pos int) {
@@ -49,7 +49,7 @@ func (metadata *MetaData) LintMetaData(pos int) {
 
 func ReaderBuf(bytevals []byte) *Reader {
 	buffer := bytes.NewReader(bytevals)
-	buf := &Reader{Reader: protoscan.NewProtobufScanner(buffer), Buf: bytevals, FileBool: false}
+	buf := &Reader{Reader: pbf.NewProtobufScanner(buffer), Buf: bytevals, FileBool: false}
 	buf.CheckMetaData()
 	buf.FeatureCount = 0
 
@@ -64,7 +64,7 @@ func ReaderFile(filename string) *Reader {
 	reader := bufio.NewReader(file)
 
 	buf := &Reader{
-		Reader:   protoscan.NewProtobufScanner(reader),
+		Reader:   pbf.NewProtobufScanner(reader),
 		Filename: filename,
 		FileBool: true,
 		File:     file,
@@ -101,12 +101,12 @@ func ReadFeature(bytevals []byte) *geom.Feature {
 }
 
 func ReadKeys(bytevals []byte) []string {
-	pbfval := pbf.PBF{Pbf: bytevals, Length: len(bytevals)}
+	pbfval := pbf.Reader{Pbf: bytevals, Length: len(bytevals)}
 	keys := []string{}
-	key, val := pbfval.ReadKey()
+	key, val := pbfval.ReadTag()
 	if key == 1 && val == 0 {
 		pbfval.ReadVarint()
-		key, val = pbfval.ReadKey()
+		key, val = pbfval.ReadTag()
 	}
 	for key == 2 && val == 2 {
 		size := pbfval.ReadVarint()
@@ -115,13 +115,13 @@ func ReadKeys(bytevals []byte) []string {
 		keys = append(keys, pbfval.ReadString())
 
 		pbfval.Pos = endpos
-		key, val = pbfval.ReadKey()
+		key, val = pbfval.ReadTag()
 	}
 
 	return keys
 }
 
-func ReadBoundingBox(bytevals []byte) []float64 {
+func ReadBoundingBox(bytevals []byte, factor float64) []float64 {
 	pos := len(bytevals) - 1
 	alloc := make([]byte, 32)
 	allocpos := 31
@@ -136,11 +136,11 @@ func ReadBoundingBox(bytevals []byte) []float64 {
 	}
 
 	bb := make([]float64, 4)
-	pbfval := pbf.NewPBF(alloc[allocpos+3:])
-	bb[0] = float64(pbfval.ReadSVarintPower())
-	bb[1] = float64(pbfval.ReadSVarintPower())
-	bb[2] = float64(pbfval.ReadSVarintPower())
-	bb[3] = float64(pbfval.ReadSVarintPower())
+	pbfval := pbf.NewReader(alloc[allocpos+3:])
+	bb[0] = float64(io.ReadSVarintPower(pbfval, factor))
+	bb[1] = float64(io.ReadSVarintPower(pbfval, factor))
+	bb[2] = float64(io.ReadSVarintPower(pbfval, factor))
+	bb[3] = float64(io.ReadSVarintPower(pbfval, factor))
 	return bb
 }
 
@@ -159,10 +159,10 @@ func (reader *Reader) Reset() {
 			fmt.Println(err)
 		}
 		read := bufio.NewReader(file)
-		reader.Reader = protoscan.NewProtobufScanner(read)
+		reader.Reader = pbf.NewProtobufScanner(read)
 	} else {
 		buffer := bytes.NewReader(reader.Buf)
-		reader.Reader = protoscan.NewProtobufScanner(buffer)
+		reader.Reader = pbf.NewProtobufScanner(buffer)
 	}
 	if reader.MetaDataBool {
 		reader.Next()
@@ -194,12 +194,12 @@ func (reader *Reader) Seek(pos int) {
 	if reader.FileBool {
 		reader.File.Seek(int64(pos), 0)
 		myreader := bufio.NewReader(reader.File)
-		reader.Reader = protoscan.NewProtobufScanner(myreader)
+		reader.Reader = pbf.NewProtobufScanner(myreader)
 		reader.Reader.TotalPosition = pos
 	} else {
 		buffer := bytes.NewReader(reader.Buf)
 		buffer.Seek(int64(pos), 0)
-		reader.Reader = protoscan.NewProtobufScanner(buffer)
+		reader.Reader = pbf.NewProtobufScanner(buffer)
 		reader.Reader.TotalPosition = pos
 	}
 }
