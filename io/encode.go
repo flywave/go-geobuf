@@ -180,7 +180,7 @@ func writeGeometry(geometry geom.Geometry, writer *pbf.Writer, factor float64, d
 		WriteMultiPolygon(writer, g.Data(), factor, dim)
 	case geom.Collection:
 		for _, geom := range g {
-			writer.WriteMessage(FEATURE_GEOMETRY, func(w *pbf.Writer) {
+			writer.WriteMessage(GEOMETRY_GEOMETRYS, func(w *pbf.Writer) {
 				writeGeometry(geom, w, factor, dim)
 			})
 		}
