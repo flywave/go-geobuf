@@ -2,6 +2,8 @@ package io
 
 import "github.com/flywave/go-pbf"
 
+type JSON string
+
 var GeometryTagTypes = map[string]int{
 	"Point":              0,
 	"MultiPoint":         1,

@@ -104,7 +104,6 @@ func ReadPolygon(pbf *pbf.Reader, endpos int, lengths []uint64, closed bool, fac
 			polygon = append(polygon, ReadLine(pbf, num, endpos, factor, dim, closed))
 		}
 	}
-
 	return polygon
 }
 

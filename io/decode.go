@@ -36,12 +36,12 @@ func readDataField(key pbf.TagType, tp pbf.WireType, res interface{}, reader *pb
 		d.featureCollection = d.readFeatureCollection()
 		bboxs := make([][]float64, 0)
 		for _, feat := range d.featureCollection.Features {
-			bboxs = append(bboxs, Get_BoundingBox(feat.Geometry))
+			bboxs = append(bboxs, CaclBoundingBox(feat.Geometry))
 		}
-		d.featureCollection.BoundingBox = Expand_BoundingBoxs(bboxs)
+		d.featureCollection.BoundingBox = ExpandBBoxs(bboxs)
 	} else if key == DATA_TYPE_FEATURE {
 		d.feature = d.readFeature()
-		d.feature.BoundingBox = Get_BoundingBox(d.feature.Geometry)
+		d.feature.BoundingBox = CaclBoundingBox(d.feature.Geometry)
 	} else if key == DATA_TYPE_GEOMETRY {
 		d.geometry, _ = d.readGeometry()
 	}
@@ -82,8 +82,9 @@ func readValue(reader *pbf.Reader, values []interface{}) {
 		newkey, _ := reader.ReadTag()
 		switch newkey {
 		case VALUES_STRING_VALUE:
-		case VALUES_JSON_VALUE:
 			values = append(values, reader.ReadString())
+		case VALUES_JSON_VALUE:
+			values = append(values, JSON(reader.ReadString()))
 		case VALUES_DOUBLE_VALUE:
 			values = append(values, reader.ReadDouble())
 		case VALUES_POS_INT_VALUE:

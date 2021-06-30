@@ -12,8 +12,6 @@ const (
 	maxPrecision = 1e6
 )
 
-type JSON string
-
 type Encode struct {
 	Keys    map[string]int
 	KeysNum int
