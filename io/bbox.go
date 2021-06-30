@@ -30,7 +30,7 @@ func BBoxPoints(pts [][]float64) []float64 {
 	return []float64{west, south, east, north}
 }
 
-func MergeBoundingBoxs(bb1 []float64, bb2 []float64) []float64 {
+func MergeBBoxs(bb1 []float64, bb2 []float64) []float64 {
 	west, south, east, north := 180.0, 90.0, -180.0, -90.0
 
 	west1, south1, east1, north1 := bb1[0], bb1[1], bb1[2], bb1[3]
@@ -66,7 +66,7 @@ func MergeBoundingBoxs(bb1 []float64, bb2 []float64) []float64 {
 func ExpandBBoxs(bboxs [][]float64) []float64 {
 	bbox := bboxs[0]
 	for _, temp_bbox := range bboxs[1:] {
-		bbox = MergeBoundingBoxs(bbox, temp_bbox)
+		bbox = MergeBBoxs(bbox, temp_bbox)
 	}
 	return bbox
 }
@@ -109,7 +109,7 @@ func BBoxMultiPolygonGeometry(multipolygon [][][][]float64) []float64 {
 	return ExpandBBoxs(bboxs)
 }
 
-func CaclBoundingBox(g geom.Geometry) []float64 {
+func CaclBBoxs(g geom.Geometry) []float64 {
 	switch v := g.(type) {
 	case geom.Point:
 		return BBoxPointGeometry(v.Data())
@@ -142,7 +142,7 @@ func CaclBoundingBox(g geom.Geometry) []float64 {
 func BBoxGeometryCollection(gs []geom.Geometry) []float64 {
 	bboxs := [][]float64{}
 	for _, g := range gs {
-		bboxs = append(bboxs, CaclBoundingBox(g))
+		bboxs = append(bboxs, CaclBBoxs(g))
 	}
 	return ExpandBBoxs(bboxs)
 }

@@ -36,12 +36,12 @@ func readDataField(key pbf.TagType, tp pbf.WireType, res interface{}, reader *pb
 		d.featureCollection = d.readFeatureCollection()
 		bboxs := make([][]float64, 0)
 		for _, feat := range d.featureCollection.Features {
-			bboxs = append(bboxs, CaclBoundingBox(feat.Geometry))
+			bboxs = append(bboxs, CaclBBoxs(feat.Geometry))
 		}
 		d.featureCollection.BoundingBox = ExpandBBoxs(bboxs)
 	} else if key == DATA_TYPE_FEATURE {
 		d.feature = d.readFeature()
-		d.feature.BoundingBox = CaclBoundingBox(d.feature.Geometry)
+		d.feature.BoundingBox = CaclBBoxs(d.feature.Geometry)
 	} else if key == DATA_TYPE_GEOMETRY {
 		d.geometry, _ = d.readGeometry()
 	}
@@ -180,17 +180,41 @@ func readGeometryField(key pbf.TagType, val pbf.WireType, result interface{}, re
 
 		switch geomtype {
 		case "Point":
-			geometry = general.NewPoint(ReadPoint(reader, endpos, ctx.Factor, ctx.Dim))
+			if ctx.Dim == 2 {
+				geometry = general.NewPoint(ReadPoint(reader, endpos, ctx.Factor, ctx.Dim))
+			} else if ctx.Dim == 3 {
+				geometry = general.NewPoint3(ReadPoint(reader, endpos, ctx.Factor, ctx.Dim))
+			}
 		case "LineString":
-			geometry = general.NewLineString(ReadLine(reader, 0, endpos, ctx.Factor, ctx.Dim, false))
+			if ctx.Dim == 2 {
+				geometry = general.NewLineString(ReadLine(reader, 0, endpos, ctx.Factor, ctx.Dim, false))
+			} else if ctx.Dim == 3 {
+				geometry = general.NewLineString3(ReadLine(reader, 0, endpos, ctx.Factor, ctx.Dim, false))
+			}
 		case "Polygon":
-			geometry = general.NewPolygon(ReadPolygon(reader, endpos, lengths, true, ctx.Factor, ctx.Dim))
+			if ctx.Dim == 2 {
+				geometry = general.NewPolygon(ReadPolygon(reader, endpos, lengths, true, ctx.Factor, ctx.Dim))
+			} else if ctx.Dim == 3 {
+				geometry = general.NewPolygon3(ReadPolygon(reader, endpos, lengths, true, ctx.Factor, ctx.Dim))
+			}
 		case "MultiPoint":
-			geometry = general.NewMultiPoint(ReadLine(reader, 0, endpos, ctx.Factor, ctx.Dim, false))
+			if ctx.Dim == 2 {
+				geometry = general.NewMultiPoint(ReadLine(reader, 0, endpos, ctx.Factor, ctx.Dim, false))
+			} else if ctx.Dim == 3 {
+				geometry = general.NewMultiPoint3(ReadLine(reader, 0, endpos, ctx.Factor, ctx.Dim, false))
+			}
 		case "MultiLineString":
-			geometry = general.NewMultiLineString(ReadPolygon(reader, endpos, lengths, false, ctx.Factor, ctx.Dim))
+			if ctx.Dim == 2 {
+				geometry = general.NewMultiLineString(ReadPolygon(reader, endpos, lengths, false, ctx.Factor, ctx.Dim))
+			} else if ctx.Dim == 3 {
+				geometry = general.NewMultiLineString3(ReadPolygon(reader, endpos, lengths, false, ctx.Factor, ctx.Dim))
+			}
 		case "MultiPolygon":
-			geometry = general.NewMultiPolygon(ReadMultiPolygon(reader, endpos, lengths, ctx.Factor, ctx.Dim))
+			if ctx.Dim == 2 {
+				geometry = general.NewMultiPolygon(ReadMultiPolygon(reader, endpos, lengths, ctx.Factor, ctx.Dim))
+			} else if ctx.Dim == 3 {
+				geometry = general.NewMultiPolygon3(ReadMultiPolygon(reader, endpos, lengths, ctx.Factor, ctx.Dim))
+			}
 		}
 	}
 	if key == GEOMETRY_GEOMETRYS && val == pbf.Bytes {
