@@ -2,7 +2,9 @@ package io
 
 import (
 	"math"
+	"testing"
 
+	"github.com/flywave/go-geom"
 	"github.com/flywave/go-geom/general"
 )
 
@@ -25,3 +27,141 @@ var linestring, _ = general.UnmarshalFeature([]byte(linestring_s))
 var multilinestring, _ = general.UnmarshalFeature([]byte(multilinestring_s))
 var point, _ = general.UnmarshalFeature([]byte(point_s))
 var multipoint, _ = general.UnmarshalFeature([]byte(multipoint_s))
+
+func Benchmark_Write_New(b *testing.B) {
+	b.ReportAllocs()
+
+	for n := 0; n < b.N; n++ {
+		WriteFeature(feature)
+	}
+}
+
+func Benchmark_Read_New(b *testing.B) {
+	b.ReportAllocs()
+
+	for n := 0; n < b.N; n++ {
+		ReadFeature(bytevals)
+	}
+}
+
+func TestReadWritePolygon(t *testing.T) {
+	bytevals2 := WriteFeature(polygon)
+	newfeature := ReadFeature(bytevals2)
+
+	if newfeature.Geometry.GetType() == newfeature.Geometry.GetType() {
+		newPoly := newfeature.Geometry.(geom.Polygon)
+		poly := polygon.Geometry.(geom.Polygon)
+		for i, ls := range newPoly.Sublines() {
+			for j, newpt := range ls.Subpoints() {
+				pt := poly.Sublines()[i].Subpoints()[j]
+				deltax := math.Abs(newpt.X() - pt.X())
+				deltay := math.Abs(newpt.Y() - pt.Y())
+				if deltax > precision || deltay > precision {
+					t.Errorf("Test_Read_Write_Polygon Geometry signicantly off %v %v", newfeature.Geometry, polygon.Geometry)
+				}
+			}
+		}
+	} else {
+		t.Errorf("Test_Read_Write_Polygon %v %v", newfeature, polygon)
+	}
+}
+
+func TestReadWriteMultiPolygon(t *testing.T) {
+	bytevals2 := WriteFeature(multipolygon)
+	newfeature := ReadFeature(bytevals2)
+
+	if newfeature.Geometry.GetType() == newfeature.Geometry.GetType() {
+		newPoly := newfeature.Geometry.(geom.MultiPolygon)
+		poly := multipolygon.Geometry.(geom.MultiPolygon)
+		for i, pls := range newPoly.Polygons() {
+			for j, ls := range pls.Sublines() {
+				for k, newpt := range ls.Subpoints() {
+					pt := poly.Polygons()[i].Sublines()[j].Subpoints()[k]
+					deltax := math.Abs(newpt.X() - pt.X())
+					deltay := math.Abs(newpt.Y() - pt.Y())
+					if deltax > precision || deltay > precision {
+						t.Errorf("TestReadWriteMultiPolygon Geometry signicantly off %v %v", newfeature.Geometry, multipolygon.Geometry)
+					}
+				}
+			}
+		}
+	} else {
+		t.Errorf("TestReadWriteMultiPolygon %v %v %v", newfeature, multipolygon, multipolygon)
+	}
+
+}
+
+func TestReadWriteMultiLineString(t *testing.T) {
+	bytevals2 := WriteFeature(multilinestring)
+	newfeature := ReadFeature(bytevals2)
+	if newfeature.Geometry.GetType() == newfeature.Geometry.GetType() {
+		newPoly := newfeature.Geometry.(geom.MultiLine)
+		poly := polygon.Geometry.(geom.MultiLine)
+		for i, ls := range newPoly.Lines() {
+			for j, newpt := range ls.Subpoints() {
+				pt := poly.Lines()[i].Subpoints()[j]
+				deltax := math.Abs(newpt.X() - pt.X())
+				deltay := math.Abs(newpt.Y() - pt.Y())
+				if deltax > precision || deltay > precision {
+					t.Errorf("TestReadWriteMultiLineString Geometry signicantly off %v %v", newfeature.Geometry, multilinestring.Geometry)
+				}
+			}
+		}
+	} else {
+		t.Errorf("TestReadWriteMultiLineString %v %v", newfeature, multilinestring)
+	}
+}
+
+func TestReadWriteLineString(t *testing.T) {
+	bytevals2 := WriteFeature(linestring)
+	newfeature := ReadFeature(bytevals2)
+	if newfeature.Geometry.GetType() == newfeature.Geometry.GetType() {
+		newPoly := newfeature.Geometry.(geom.LineString)
+		poly := polygon.Geometry.(geom.LineString)
+		for i, newpt := range newPoly.Subpoints() {
+			pt := poly.Subpoints()[i]
+			deltax := math.Abs(newpt.X() - pt.X())
+			deltay := math.Abs(newpt.Y() - pt.Y())
+			if deltax > precision || deltay > precision {
+				t.Errorf("TestReadWriteLineString Geometry signicantly off %v %v", newfeature.Geometry, linestring.Geometry)
+			}
+		}
+	} else {
+		t.Errorf("TestReadWriteLineString %v %v", newfeature, linestring)
+	}
+}
+
+func TestReadWriteMultiPoint(t *testing.T) {
+	bytevals2 := WriteFeature(multipoint)
+	newfeature := ReadFeature(bytevals2)
+	if newfeature.Geometry.GetType() == newfeature.Geometry.GetType() {
+		newPoly := newfeature.Geometry.(geom.MultiPoint)
+		poly := polygon.Geometry.(geom.MultiPoint)
+		for i, newpt := range newPoly.Points() {
+			pt := poly.Points()[i]
+			deltax := math.Abs(newpt.X() - pt.X())
+			deltay := math.Abs(newpt.Y() - pt.Y())
+			if deltax > precision || deltay > precision {
+				t.Errorf("TestReadWriteLineString Geometry signicantly off %v %v", newfeature.Geometry, multipoint.Geometry)
+			}
+		}
+	} else {
+		t.Errorf("TestReadWriteLineString %v %v", newfeature, multipoint)
+	}
+}
+
+func TestReadWritePoint(t *testing.T) {
+	bytevals2 := WriteFeature(point)
+	newfeature := ReadFeature(bytevals2)
+	if newfeature.Geometry.GetType() == newfeature.Geometry.GetType() {
+		newpt := newfeature.Geometry.(geom.Point)
+		pt := polygon.Geometry.(geom.Point)
+		deltax := math.Abs(newpt.X() - pt.X())
+		deltay := math.Abs(newpt.Y() - pt.Y())
+		if deltax > precision || deltay > precision {
+			t.Errorf("TestReadWriteLineString Geometry signicantly off %v %v", newfeature.Geometry, point.Geometry)
+		}
+	} else {
+		t.Errorf("TestReadWriteLineString %v %v", newfeature, point)
+	}
+}

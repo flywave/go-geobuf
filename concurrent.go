@@ -1,7 +1,7 @@
 package geobuf
 
 import (
-	raw "github.com/flywave/go-geobuf/io"
+	"github.com/flywave/go-geobuf/io"
 	"github.com/flywave/go-geom"
 )
 
@@ -22,7 +22,7 @@ func (con *Concurrent) StartProcesses() {
 	for con.Reader.Next() && i < con.Limit {
 		bytevals := con.Reader.Bytes()
 		go func(bytevals []byte) {
-			con.C <- raw.ReadFeature(bytevals)
+			con.C <- io.ReadFeature(bytevals)
 		}(bytevals)
 		i++
 	}

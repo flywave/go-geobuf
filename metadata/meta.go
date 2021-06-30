@@ -5,8 +5,9 @@ import (
 	"os"
 	"time"
 
-	g "github.com/flywave/go-geobuf"
-	raw "github.com/flywave/go-geobuf/io"
+	"github.com/flywave/go-geobuf"
+	"github.com/flywave/go-geobuf/io"
+
 	"github.com/flywave/go-geom"
 	"github.com/flywave/go-geom/general"
 )
@@ -115,16 +116,16 @@ func MakeMeta(feature *geom.Feature) *Meta {
 		fmt.Println(err)
 	}
 	s = time.Now()
-	bytevals = raw.WriteFeature(feature)
+	bytevals = io.WriteFeature(feature)
 	meta.TimeWriteBUF = int(time.Now().Sub(s).Nanoseconds())
 	meta.SizeBUF = len(bytevals)
 	s = time.Now()
-	feature = raw.ReadFeature(bytevals)
+	feature = io.ReadFeature(bytevals)
 	meta.TimeReadBUF = int(time.Now().Sub(s).Nanoseconds())
 	return meta
 }
 
-func CreateMetaCSV(buf *g.Reader, outfilecsv string) {
+func CreateMetaCSV(buf *geobuf.Reader, outfilecsv string) {
 	outcsv := NewMetaCSV(outfilecsv)
 	i := 0
 	for buf.Next() {

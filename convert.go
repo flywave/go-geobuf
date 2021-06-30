@@ -2,9 +2,7 @@ package geobuf
 
 import (
 	"fmt"
-	"io/ioutil"
 	"os"
-	"strings"
 	"sync"
 	"time"
 
@@ -12,7 +10,7 @@ import (
 	"github.com/flywave/go-geom/general"
 )
 
-type Geojson_File struct {
+type GeojsonFile struct {
 	Features []*geom.Feature
 	Count    int
 	File     *os.File
@@ -20,7 +18,7 @@ type Geojson_File struct {
 	Feat_Pos int
 }
 
-func NewGeojson(filename string) Geojson_File {
+func NewGeojson(filename string) GeojsonFile {
 	file, _ := os.Open(filename)
 
 	bytevals := make([]byte, 100)
@@ -35,10 +33,10 @@ func NewGeojson(filename string) Geojson_File {
 		}
 	}
 
-	return Geojson_File{File: file, Pos: int64(startpos + 1)}
+	return GeojsonFile{File: file, Pos: int64(startpos + 1)}
 }
 
-func (geojsonfile *Geojson_File) ReadChunk(size int) []string {
+func (geojsonfile *GeojsonFile) ReadChunk(size int) []string {
 	var bytevals []byte
 	if size > int(geojsonfile.Pos)+10000000 {
 		bytevals = make([]byte, 10000000)
@@ -175,66 +173,4 @@ func MapGeobuf(infile string, newfile string, mapfunc MapFunc) {
 		feature = mapfunc(feature)
 		geobuf2.WriteFeature(feature)
 	}
-}
-
-func BenchmarkRead(filename_geojson string, filename_geobuf string) {
-	if strings.Contains(filename_geojson, ".geobuf") {
-		dummy := filename_geojson
-		filename_geojson = filename_geobuf
-		filename_geobuf = dummy
-	}
-
-	s := time.Now()
-	bytevals, err := ioutil.ReadFile(filename_geojson)
-	if err != nil {
-		fmt.Println(err)
-	}
-	_, err = geom.UnmarshalFeatureCollection(bytevals)
-	if err != nil {
-		fmt.Println(err)
-	}
-	end_geojson := time.Now().Sub(s)
-
-	s = time.Now()
-	geobuf := ReaderFile(filename_geobuf)
-	for geobuf.Next() {
-		geobuf.Feature()
-	}
-	end_geobuf := time.Now().Sub(s)
-
-	fmt.Printf("Time to Read Geojson File: %s\nTime to Read Geobuf File: %s\n", end_geojson, end_geobuf)
-}
-
-func BenchmarkWrite(filename_geojson string, filename_geobuf string) {
-	if strings.Contains(filename_geojson, ".geobuf") {
-		dummy := filename_geojson
-		filename_geojson = filename_geobuf
-		filename_geobuf = dummy
-	}
-
-	bytevals, err := ioutil.ReadFile(filename_geojson)
-	if err != nil {
-		fmt.Println(err)
-	}
-	fc, err := geom.UnmarshalFeatureCollection(bytevals)
-	if err != nil {
-		fmt.Println(err)
-	}
-
-	s := time.Now()
-	_, err = fc.MarshalJSON()
-	if err != nil {
-		fmt.Println(err)
-	}
-	end_geojson := time.Now().Sub(s)
-
-	s = time.Now()
-	geobuf := WriterBufNew()
-	for _, feature := range fc.Features {
-		geobuf.WriteFeature(feature)
-	}
-	geobuf.Bytes()
-	end_geobuf := time.Now().Sub(s)
-
-	fmt.Printf("Time to Write Geojson File: %s\nTime to Write Geobuf File: %s\n", end_geojson, end_geobuf)
 }

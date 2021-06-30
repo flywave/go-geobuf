@@ -65,7 +65,6 @@ func (writer *Writer) WriteRaw(bytevals []byte) {
 	} else {
 		writer.Writer.Write(bytevals)
 	}
-
 }
 
 func (writer *Writer) AddGeobuf(buf *Writer) {

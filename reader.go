@@ -4,15 +4,15 @@ import (
 	"bufio"
 	"os"
 
-	"github.com/flywave/go-geobuf/io"
-	"github.com/flywave/go-mapbox/tileid"
-
 	"bytes"
 	"encoding/gob"
 	"fmt"
 
 	"github.com/flywave/go-geom"
 	"github.com/flywave/go-pbf"
+
+	"github.com/flywave/go-geobuf/io"
+	"github.com/flywave/go-mapbox/tileid"
 )
 
 type Reader struct {
@@ -234,7 +234,6 @@ func (reader *Reader) CheckMetaData() {
 		reader.MetaData.LintMetaData(reader.Reader.TotalPosition)
 		reader.MetaDataBool = true
 		reader.FeatureCount = 0
-
 	} else {
 		reader.Reset()
 	}
