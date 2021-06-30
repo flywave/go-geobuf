@@ -12,12 +12,13 @@ import (
 	"github.com/flywave/go-pbf"
 
 	"github.com/flywave/go-geobuf/io"
+
 	"github.com/flywave/go-mapbox/tileid"
 )
 
 type Reader struct {
 	FileBool     bool
-	Reader       *pbf.ProtobufScanner
+	Reader       *pbf.Scanner
 	Filename     string
 	File         *os.File
 	Buf          []byte
@@ -49,7 +50,7 @@ func (metadata *MetaData) LintMetaData(pos int) {
 
 func ReaderBuf(bytevals []byte) *Reader {
 	buffer := bytes.NewReader(bytevals)
-	buf := &Reader{Reader: pbf.NewProtobufScanner(buffer), Buf: bytevals, FileBool: false}
+	buf := &Reader{Reader: pbf.NewScanner(buffer), Buf: bytevals, FileBool: false}
 	buf.CheckMetaData()
 	buf.FeatureCount = 0
 	return buf
@@ -63,7 +64,7 @@ func ReaderFile(filename string) *Reader {
 	reader := bufio.NewReader(file)
 
 	buf := &Reader{
-		Reader:   pbf.NewProtobufScanner(reader),
+		Reader:   pbf.NewScanner(reader),
 		Filename: filename,
 		FileBool: true,
 		File:     file,
@@ -97,27 +98,6 @@ func (reader *Reader) FeatureIndicies() (*geom.Feature, [2]int) {
 
 func ReadFeature(bytevals []byte) *geom.Feature {
 	return io.ReadFeature(bytevals)
-}
-
-func ReadKeys(bytevals []byte) []string {
-	pbfval := pbf.Reader{Pbf: bytevals, Length: len(bytevals)}
-	keys := []string{}
-	key, val := pbfval.ReadTag()
-	if key == 1 && val == 0 {
-		pbfval.ReadVarint()
-		key, val = pbfval.ReadTag()
-	}
-	for key == 2 && val == 2 {
-		size := pbfval.ReadVarint()
-		endpos := pbfval.Pos + size
-		pbfval.Pos += 1
-		keys = append(keys, pbfval.ReadString())
-
-		pbfval.Pos = endpos
-		key, val = pbfval.ReadTag()
-	}
-
-	return keys
 }
 
 func ReadBoundingBox(bytevals []byte, factor float64) []float64 {
@@ -158,10 +138,10 @@ func (reader *Reader) Reset() {
 			fmt.Println(err)
 		}
 		read := bufio.NewReader(file)
-		reader.Reader = pbf.NewProtobufScanner(read)
+		reader.Reader = pbf.NewScanner(read)
 	} else {
 		buffer := bytes.NewReader(reader.Buf)
-		reader.Reader = pbf.NewProtobufScanner(buffer)
+		reader.Reader = pbf.NewScanner(buffer)
 	}
 	if reader.MetaDataBool {
 		reader.Next()
@@ -193,12 +173,12 @@ func (reader *Reader) Seek(pos int) {
 	if reader.FileBool {
 		reader.File.Seek(int64(pos), 0)
 		myreader := bufio.NewReader(reader.File)
-		reader.Reader = pbf.NewProtobufScanner(myreader)
+		reader.Reader = pbf.NewScanner(myreader)
 		reader.Reader.TotalPosition = pos
 	} else {
 		buffer := bytes.NewReader(reader.Buf)
 		buffer.Seek(int64(pos), 0)
-		reader.Reader = pbf.NewProtobufScanner(buffer)
+		reader.Reader = pbf.NewScanner(buffer)
 		reader.Reader.TotalPosition = pos
 	}
 }
