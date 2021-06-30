@@ -12,20 +12,6 @@ import (
 	"io/ioutil"
 )
 
-const maxVarintBytes = 10
-
-func EncodeVarint(x uint64) []byte {
-	var buf [maxVarintBytes]byte
-	var n int
-	for n = 0; x > 127; n++ {
-		buf[n] = 0x80 | uint8(x&0x7F)
-		x >>= 7
-	}
-	buf[n] = uint8(x)
-	n++
-	return buf[0:n]
-}
-
 type Writer struct {
 	Filename  string
 	Writer    *bufio.Writer

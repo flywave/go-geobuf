@@ -22,12 +22,6 @@ func Benchmark_Write_Feature_Benchmark_New(b *testing.B) {
 	b.ReportAllocs()
 
 	for n := 0; n < b.N; n++ {
-		bytevals := io.WriteFeature(feature)
-
-		bytevals = append(
-			append(
-				[]byte{10}, EncodeVarint(uint64(len(bytevals)))...,
-			),
-			bytevals...)
+		io.WriteFeature(feature)
 	}
 }

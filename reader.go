@@ -172,7 +172,7 @@ func (reader *Reader) Reset() {
 }
 
 func (reader *Reader) ReadIndAppend(inds [2]int) []byte {
-	inds[0] = inds[0] - len(EncodeVarint(uint64(inds[1]-inds[0]))) - 1
+	inds[0] = inds[0] - len(pbf.EncodeVarint(uint64(inds[1]-inds[0]))) - 1
 	bytevals := make([]byte, inds[1]-inds[0])
 	reader.File.ReadAt(bytevals, int64(inds[0]))
 	return bytevals
