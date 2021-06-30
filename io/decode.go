@@ -222,13 +222,19 @@ func (d *Decode) readGeometry() (geom.Geometry, map[string]interface{}) {
 }
 
 func ReadFeature(bytevals []byte) *geom.Feature {
-	return nil
+	reader := pbf.NewReader(bytevals)
+	d := NewDecode(reader)
+	return d.feature
 }
 
 func ReadFeatureCollection(bytevals []byte) *geom.FeatureCollection {
-	return nil
+	reader := pbf.NewReader(bytevals)
+	d := NewDecode(reader)
+	return d.featureCollection
 }
 
 func ReadGeometry(bytevals []byte) geom.Geometry {
-	return nil
+	reader := pbf.NewReader(bytevals)
+	d := NewDecode(reader)
+	return d.geometry
 }

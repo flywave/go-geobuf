@@ -23,7 +23,17 @@ type Encode struct {
 	writer  *pbf.Writer
 }
 
-func (e *Encode) writeDataField(obj interface{}, writer *pbf.Writer) {
+func NewEncode(obj interface{}) *Encode {
+	d := &Encode{Keys: make(map[string]int), KeysNum: 0, KeysArr: make([]string, 0), Dim: 2, Factor: math.Pow(10.0, 7.0), writer: pbf.NewWriter()}
+	d.writeDataField(obj)
+	return d
+}
+
+func (e *Encode) Bytes() []byte {
+	return e.writer.Finish()
+}
+
+func (e *Encode) writeDataField(obj interface{}) {
 	e.analyze(obj)
 
 	e.Factor = math.Min(e.Factor, maxPrecision)
@@ -256,13 +266,16 @@ func (e *Encode) writeFeatureCollection(obj *geom.FeatureCollection) {
 }
 
 func WriteFeature(feat *geom.Feature) []byte {
-	return nil
+	encode := NewEncode(feat)
+	return encode.Bytes()
 }
 
 func WriteFeatureCollection(featcol *geom.FeatureCollection) []byte {
-	return nil
+	encode := NewEncode(featcol)
+	return encode.Bytes()
 }
 
 func WriteGeometry(geo geom.Geometry) []byte {
-	return nil
+	encode := NewEncode(geo)
+	return encode.Bytes()
 }
