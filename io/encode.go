@@ -9,7 +9,7 @@ import (
 )
 
 const (
-	maxPrecision = 1e6
+	maxPrecision = 1e7
 )
 
 type Encode struct {

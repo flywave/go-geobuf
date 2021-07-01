@@ -12,7 +12,7 @@ import (
 	"github.com/flywave/go-geom/general"
 )
 
-var PrecisionError = math.Pow(10.0, -5.0)
+var PrecisionError = math.Pow(10.0, -6.0)
 
 func DeltaPt(pt []float64, testpt []float64) float64 {
 	deltax := math.Abs(pt[0] - testpt[0])
