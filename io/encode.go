@@ -49,6 +49,7 @@ func (e *Encode) writeDataField(obj interface{}) {
 	if precision != 6 {
 		e.writer.WriteVarint(PRECISION, precision)
 	}
+
 	switch g := obj.(type) {
 	case *geom.Feature:
 		e.writer.WriteMessage(DATA_TYPE_FEATURE, func(w *pbf.Writer) {
@@ -200,6 +201,8 @@ func writeFeature(feature *geom.Feature, writer *pbf.Writer, keys map[string]int
 		switch kd {
 		case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64, reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
 			writer.WriteUInt64(FEATURE_INTID, uint64(vv.Int()))
+		case reflect.Float64:
+			writer.WriteUInt64(FEATURE_INTID, uint64(vv.Float()))
 		case reflect.String:
 			writer.WriteString(FEATURE_ID, vv.String())
 		}
@@ -238,27 +241,27 @@ func writeValue(value interface{}, writer *pbf.Writer) {
 	}
 	switch v := value.(type) {
 	case string:
-		writer.WriteValue(VALUES_STRING_VALUE, v)
+		writer.WriteString(VALUES_STRING_VALUE, v)
 	case float64:
-		writer.WriteValue(VALUES_DOUBLE_VALUE, v)
+		writer.WriteDouble(VALUES_DOUBLE_VALUE, v)
 	case uint64:
-		writer.WriteValue(VALUES_POS_INT_VALUE, v)
+		writer.WriteUInt64(VALUES_POS_INT_VALUE, v)
 	case int64:
 		if v < 0 {
-			writer.WriteValue(VALUES_NEG_INT_VALUE, uint64(-v))
+			writer.WriteUInt64(VALUES_NEG_INT_VALUE, uint64(-v))
 		} else {
-			writer.WriteValue(VALUES_POS_INT_VALUE, uint64(v))
+			writer.WriteUInt64(VALUES_POS_INT_VALUE, uint64(v))
 		}
 	case int:
 		if v < 0 {
-			writer.WriteValue(VALUES_NEG_INT_VALUE, uint64(-v))
+			writer.WriteUInt64(VALUES_NEG_INT_VALUE, uint64(-v))
 		} else {
-			writer.WriteValue(VALUES_POS_INT_VALUE, uint64(v))
+			writer.WriteUInt64(VALUES_POS_INT_VALUE, uint64(v))
 		}
 	case bool:
-		writer.WriteValue(VALUES_BOOL_VALUE, v)
+		writer.WriteBool(VALUES_BOOL_VALUE, v)
 	case JSON:
-		writer.WriteValue(VALUES_JSON_VALUE, string(v))
+		writer.WriteString(VALUES_JSON_VALUE, string(v))
 	}
 }
 

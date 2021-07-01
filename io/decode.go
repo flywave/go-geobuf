@@ -77,7 +77,7 @@ func readProps(reader *pbf.Reader, ctx *readerContext, props map[string]interfac
 	return props
 }
 
-func readValue(reader *pbf.Reader, values []interface{}) {
+func readValue(reader *pbf.Reader, values []interface{}) []interface{} {
 	size := reader.ReadVarint()
 	endpos := reader.Pos + size
 
@@ -99,6 +99,7 @@ func readValue(reader *pbf.Reader, values []interface{}) {
 		}
 		reader.Pos = endpos
 	}
+	return values
 }
 
 func readFeatureCollectionField(tag pbf.TagType, tp pbf.WireType, result interface{}, reader *pbf.Reader) {
@@ -108,7 +109,7 @@ func readFeatureCollectionField(tag pbf.TagType, tp pbf.WireType, result interfa
 		fctx.feature = &geom.Feature{}
 		ctx.featureCollection.Features = append(ctx.featureCollection.Features, readFeature(reader, &fctx))
 	} else if tag == FEATURE_COLLECTION_VALUES {
-		readValue(reader, ctx.Values)
+		ctx.Values = readValue(reader, ctx.Values)
 	} else if tag == FEATURE_COLLECTION_CUSTOM_PROPERTIES {
 		ctx.properties = readProps(reader, ctx, ctx.properties)
 	}
@@ -145,8 +146,8 @@ func readFeatureField(key pbf.TagType, val pbf.WireType, result interface{}, rea
 	if key == FEATURE_INTID {
 		feature.ID = reader.ReadVarint()
 	}
-	for key == FEATURE_UNIQUE_VALUES && val == pbf.Bytes {
-		readValue(reader, ctx.Values)
+	if key == FEATURE_UNIQUE_VALUES && val == pbf.Bytes {
+		ctx.Values = readValue(reader, ctx.Values)
 	}
 	if key == FEATURE_PROPERTIES {
 		if feature.Properties == nil {
@@ -234,7 +235,7 @@ func readGeometryField(key pbf.TagType, val pbf.WireType, result interface{}, re
 		readGeometry(reader, ctx)
 	}
 	if key == GEOMETRY_VALUES && val == pbf.Bytes {
-		readValue(reader, ctx.Values)
+		ctx.Values = readValue(reader, ctx.Values)
 	}
 	if key == GEOMETRY_CUSTOM_PROPERTIES {
 		ctx.properties = readProps(reader, ctx, make(map[string]interface{}))

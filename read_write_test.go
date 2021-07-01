@@ -7,15 +7,66 @@ import (
 	"os"
 	"testing"
 
+	"github.com/flywave/go-geobuf/io"
 	"github.com/flywave/go-geom"
+	"github.com/flywave/go-geom/general"
 )
 
-var PrecisionError = math.Pow(10.0, -6.0)
+var PrecisionError = math.Pow(10.0, -5.0)
 
 func DeltaPt(pt []float64, testpt []float64) float64 {
 	deltax := math.Abs(pt[0] - testpt[0])
 	deltay := math.Abs(pt[1] - testpt[1])
 	return deltax + deltay
+}
+
+func TestReadWriteOneFile(t *testing.T) {
+	bytevals, err := ioutil.ReadFile("test_data/county.geojson")
+	if err != nil {
+		fmt.Println(err)
+	}
+
+	fc, err := general.UnmarshalFeatureCollection(bytevals)
+	if err != nil {
+		fmt.Println(err)
+	}
+
+	featuremap := map[int]*geom.Feature{}
+	for _, feature := range fc.Features {
+		featuremap[int(feature.ID.(float64))] = feature
+	}
+
+	for id := range featuremap {
+		bytevals := io.WriteFeature(featuremap[id])
+		feature := io.ReadFeature(bytevals)
+		id := int(feature.ID.(int))
+		testfeature := featuremap[id]
+		if testfeature.Geometry.GetType() == feature.Geometry.GetType() {
+			poly := testfeature.Geometry.(geom.Polygon)
+			fpoly := feature.Geometry.(geom.Polygon)
+			for i := range poly.Sublines() {
+				testring := poly.Data()[i]
+				ring := fpoly.Data()[i]
+				if len(ring) != len(testring) {
+					t.Errorf("Different ring sizes expected %d got %d", len(testring), len(ring))
+				} else {
+					for j := range ring {
+						pt := ring[j]
+						testpt := testring[j]
+						deltapt := DeltaPt(pt, testpt)
+						if PrecisionError < deltapt {
+							t.Errorf("Different Points expected %v %v", testpt, pt)
+						}
+
+					}
+				}
+			}
+		} else {
+			t.Errorf("Different Types")
+		}
+		break
+	}
+
 }
 
 func TestReadWriteFile(t *testing.T) {
@@ -24,7 +75,7 @@ func TestReadWriteFile(t *testing.T) {
 		fmt.Println(err)
 	}
 
-	fc, err := geom.UnmarshalFeatureCollection(bytevals)
+	fc, err := general.UnmarshalFeatureCollection(bytevals)
 	if err != nil {
 		fmt.Println(err)
 	}
@@ -88,7 +139,7 @@ func TestReadWriteBuf(t *testing.T) {
 		fmt.Println(err)
 	}
 
-	fc, err := geom.UnmarshalFeatureCollection(bytevals)
+	fc, err := general.UnmarshalFeatureCollection(bytevals)
 	if err != nil {
 		fmt.Println(err)
 	}
@@ -174,7 +225,7 @@ func TestReadWriteMultiBufFile(t *testing.T) {
 		fmt.Println(err)
 	}
 
-	fc, err := geom.UnmarshalFeatureCollection(bytevals)
+	fc, err := general.UnmarshalFeatureCollection(bytevals)
 	if err != nil {
 		fmt.Println(err)
 	}
@@ -260,7 +311,7 @@ func TestReadWriteMultiBuf(t *testing.T) {
 		fmt.Println(err)
 	}
 
-	fc, err := geom.UnmarshalFeatureCollection(bytevals)
+	fc, err := general.UnmarshalFeatureCollection(bytevals)
 	if err != nil {
 		fmt.Println(err)
 	}

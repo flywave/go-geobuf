@@ -6,6 +6,7 @@ import (
 
 	"github.com/flywave/go-geobuf/io"
 	"github.com/flywave/go-geom"
+	"github.com/flywave/go-pbf"
 
 	"bytes"
 	"fmt"
@@ -52,6 +53,11 @@ func WriterBuf(bytevals []byte) *Writer {
 func (writer *Writer) WriteFeature(feature *geom.Feature) {
 	bytevals := io.WriteFeature(feature)
 
+	bytevals = append(
+		append(
+			[]byte{10}, pbf.EncodeVarint(uint64(len(bytevals)))...,
+		),
+		bytevals...)
 	if writer.FileBool {
 		writer.File.Write(bytevals)
 	} else {
@@ -60,6 +66,11 @@ func (writer *Writer) WriteFeature(feature *geom.Feature) {
 }
 
 func (writer *Writer) WriteRaw(bytevals []byte) {
+	bytevals = append(
+		append(
+			[]byte{10}, pbf.EncodeVarint(uint64(len(bytevals)))...,
+		),
+		bytevals...)
 	if writer.FileBool {
 		writer.File.Write(bytevals)
 	} else {
@@ -68,7 +79,9 @@ func (writer *Writer) WriteRaw(bytevals []byte) {
 }
 
 func (writer *Writer) AddGeobuf(buf *Writer) {
-	writer.Writer.Flush()
+	if !writer.FileBool {
+		writer.Writer.Flush()
+	}
 	if !buf.FileBool {
 		buf.Writer.Flush()
 		if writer.FileBool {

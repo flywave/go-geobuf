@@ -4,7 +4,7 @@ import (
 	"io/ioutil"
 	"testing"
 
-	"github.com/flywave/go-geom"
+	"github.com/flywave/go-geom/general"
 )
 
 func BenchmarkFeatureCollectionRead(b *testing.B) {
@@ -12,7 +12,7 @@ func BenchmarkFeatureCollectionRead(b *testing.B) {
 
 	for n := 0; n < b.N; n++ {
 		bytevals, _ := ioutil.ReadFile("test_data/wv.geojson")
-		_, _ = geom.UnmarshalFeatureCollection(bytevals)
+		_, _ = general.UnmarshalFeatureCollection(bytevals)
 	}
 }
 
