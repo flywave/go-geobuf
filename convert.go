@@ -2,10 +2,12 @@ package geobuf
 
 import (
 	"fmt"
+	"io/ioutil"
 	"os"
 	"sync"
 	"time"
 
+	"github.com/flywave/go-geobuf/io"
 	"github.com/flywave/go-geom"
 	"github.com/flywave/go-geom/general"
 )
@@ -171,4 +173,42 @@ func MapGeobuf(infile string, newfile string, mapfunc MapFunc) {
 		feature = mapfunc(feature)
 		geobuf2.WriteFeature(feature)
 	}
+}
+
+func GeobufFrmCollection(infile string, outfile string) {
+	size := GetFilesize(infile)
+
+	geobuf, _ := os.Create(outfile)
+	geojsonfile := NewGeojson(infile)
+	feats := geojsonfile.ReadChunk(size)
+	fc := &geom.FeatureCollection{}
+	var wg sync.WaitGroup
+	for _, i := range feats {
+		wg.Add(1)
+		go func(i string) {
+			if len(i) > 0 {
+				feat, err := general.UnmarshalFeature([]byte(i))
+				if err != nil {
+					fmt.Println(err, feat)
+				} else {
+					fc.Features = append(fc.Features, feat)
+				}
+				fc.Features = append(fc.Features, feat)
+			}
+			wg.Done()
+		}(i)
+	}
+	bt := io.WriteFeatureCollection(fc)
+	geobuf.Write(bt)
+	geobuf.Close()
+}
+
+func GeobufToCollection(infile string, outfile string) {
+	f, _ := os.Open(infile)
+	bts, _ := ioutil.ReadAll(f)
+	fc := io.ReadFeatureCollection(bts)
+	file, _ := os.Create(outfile)
+	bt, _ := fc.MarshalJSON()
+	file.Write(bt)
+	file.Close()
 }

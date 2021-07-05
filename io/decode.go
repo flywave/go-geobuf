@@ -123,7 +123,7 @@ func (d *Decode) readFeatureCollection() *geom.FeatureCollection {
 	ctx := d.getReaderContext()
 	ctx.featureCollection = &geom.FeatureCollection{}
 	ctx.featureCollection.Type = "FeatureCollection"
-	d.reader.ReadMessage(readFeatureCollectionField, ctx.featureCollection)
+	d.reader.ReadMessage(readFeatureCollectionField, ctx)
 	return ctx.featureCollection
 }
 
