@@ -198,6 +198,7 @@ func GeobufFrmCollection(infile string, outfile string) {
 			wg.Done()
 		}(i)
 	}
+	wg.Wait()
 	bt := io.WriteFeatureCollection(fc)
 	geobuf.Write(bt)
 	geobuf.Close()
