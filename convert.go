@@ -176,30 +176,11 @@ func MapGeobuf(infile string, newfile string, mapfunc MapFunc) {
 }
 
 func GeobufFrmCollection(infile string, outfile string) {
-	size := GetFilesize(infile)
-
 	geobuf, _ := os.Create(outfile)
-	geojsonfile := NewGeojson(infile)
-	feats := geojsonfile.ReadChunk(size)
-	fc := &geom.FeatureCollection{}
-	var wg sync.WaitGroup
-	for _, i := range feats {
-		wg.Add(1)
-		go func(i string) {
-			if len(i) > 0 {
-				feat, err := general.UnmarshalFeature([]byte(i))
-				if err != nil {
-					fmt.Println(err, feat)
-				} else {
-					fc.Features = append(fc.Features, feat)
-				}
-				fc.Features = append(fc.Features, feat)
-			}
-			wg.Done()
-		}(i)
-	}
-	wg.Wait()
-	bt := io.WriteFeatureCollection(fc)
+	f, _ := os.Open(infile)
+	bt, _ := ioutil.ReadAll(f)
+	fc, _ := general.UnmarshalFeatureCollection(bt)
+	bt = io.WriteFeatureCollection(fc)
 	geobuf.Write(bt)
 	geobuf.Close()
 }

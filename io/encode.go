@@ -221,9 +221,13 @@ func writeProps(props map[string]interface{}, writer *pbf.Writer, keys map[strin
 	valueIndex := 0
 
 	for key := range props {
+		res := false
 		writer.WriteMessage(pbf.TagType(13), func(w *pbf.Writer) {
-			writeValue(props[key], w)
+			res = writeValue(props[key], w)
 		})
+		if !res {
+			continue
+		}
 		indexes = append(indexes, keys[key])
 		indexes = append(indexes, valueIndex)
 		valueIndex++
@@ -235,34 +239,42 @@ func writeProps(props map[string]interface{}, writer *pbf.Writer, keys map[strin
 	}
 }
 
-func writeValue(value interface{}, writer *pbf.Writer) {
+func writeValue(value interface{}, writer *pbf.Writer) bool {
 	if value == nil {
-		return
+		return false
 	}
 	switch v := value.(type) {
 	case string:
 		writer.WriteString(VALUES_STRING_VALUE, v)
+		return true
 	case float64:
 		writer.WriteDouble(VALUES_DOUBLE_VALUE, v)
+		return true
 	case uint64:
 		writer.WriteUInt64(VALUES_POS_INT_VALUE, v)
+		return true
 	case int64:
 		if v < 0 {
 			writer.WriteUInt64(VALUES_NEG_INT_VALUE, uint64(-v))
 		} else {
 			writer.WriteUInt64(VALUES_POS_INT_VALUE, uint64(v))
 		}
+		return true
 	case int:
 		if v < 0 {
 			writer.WriteUInt64(VALUES_NEG_INT_VALUE, uint64(-v))
 		} else {
 			writer.WriteUInt64(VALUES_POS_INT_VALUE, uint64(v))
 		}
+		return true
 	case bool:
 		writer.WriteBool(VALUES_BOOL_VALUE, v)
+		return true
 	case JSON:
 		writer.WriteString(VALUES_JSON_VALUE, string(v))
+		return true
 	}
+	return false
 }
 
 func writeFeatureCollection(obj *geom.FeatureCollection, writer *pbf.Writer, keys map[string]int, factor float64, dim int) {

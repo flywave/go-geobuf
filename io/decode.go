@@ -35,11 +35,15 @@ func readDataField(key pbf.TagType, tp pbf.WireType, res interface{}, reader *pb
 		d.Factor = math.Pow(10, float64(d.reader.ReadVarint()))
 	} else if key == DATA_TYPE_FEATURE_COLLECTION {
 		d.featureCollection = d.readFeatureCollection()
-		bboxs := make([][]float64, 0)
+		bboxs := [][]float64{}
 		for _, feat := range d.featureCollection.Features {
-			bboxs = append(bboxs, CaclBBoxs(feat.Geometry))
+			if feat.Geometry != nil {
+				bboxs = append(bboxs, CaclBBoxs(feat.Geometry))
+			}
 		}
-		d.featureCollection.BoundingBox = ExpandBBoxs(bboxs)
+		if len(bboxs) != 0 {
+			d.featureCollection.BoundingBox = ExpandBBoxs(bboxs)
+		}
 	} else if key == DATA_TYPE_FEATURE {
 		d.feature = d.readFeature()
 		d.feature.BoundingBox = CaclBBoxs(d.feature.Geometry)
@@ -72,7 +76,9 @@ func readProps(reader *pbf.Reader, ctx *readerContext, props map[string]interfac
 	endpos := size + reader.Pos
 
 	for reader.Pos < endpos {
-		props[ctx.Keys[reader.ReadVarint()]] = ctx.Values[reader.ReadVarint()]
+		kindx := reader.ReadVarint()
+		valIdx := reader.ReadVarint()
+		props[ctx.Keys[kindx]] = ctx.Values[valIdx]
 	}
 	return props
 }
@@ -111,7 +117,7 @@ func readFeatureCollectionField(tag pbf.TagType, tp pbf.WireType, result interfa
 	} else if tag == FEATURE_COLLECTION_VALUES {
 		ctx.Values = readValue(reader, ctx.Values)
 	} else if tag == FEATURE_COLLECTION_CUSTOM_PROPERTIES {
-		ctx.properties = readProps(reader, ctx, ctx.properties)
+		ctx.properties = readProps(reader, ctx, make(map[string]interface{}))
 	}
 }
 
