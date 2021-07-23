@@ -22,11 +22,7 @@ func Round(val float64, roundOn float64, places int) (newVal float64) {
 
 func ReadSVarintPower(pbf *pbf.Reader, factor float64) float64 {
 	num := int(pbf.ReadVarint())
-	if num%2 == 1 {
-		return float64((num+1)/-2) / factor
-	} else {
-		return float64(num/2) / factor
-	}
+	return float64(num/2) / factor
 }
 
 func ReadPoint(pbf *pbf.Reader, endpos int, factor float64, dim int) []float64 {

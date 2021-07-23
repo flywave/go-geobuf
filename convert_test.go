@@ -12,10 +12,10 @@ func TestJsonConvert(t *testing.T) {
 }
 
 func TestProper(t *testing.T) {
-	js := "test_data/5_23_10.geojson"
+	js := "test_data/5_22_10.geojson"
 
-	src := "test_data/5_23_10.geobuf"
-	dest := "test_data/5_23_102.geojson"
+	src := "test_data/5_22_10.geobuf"
+	dest := "test_data/5_22_102.geojson"
 	GeobufFrmCollection(js, src)
 	GeobufToCollection(src, dest)
 }
