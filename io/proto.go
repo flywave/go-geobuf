@@ -44,29 +44,21 @@ func ReadLine(pbf *pbf.Reader, num int, endpos int, factor float64, dim int, clo
 	var x, y, z float64
 	var newlist [][]float64
 	if num == 0 {
-		for startpos := pbf.Pos; startpos < endpos; startpos++ {
-			if pbf.Pbf[startpos] <= 127 {
-				num += 1
-			}
-		}
-		newlist = make([][]float64, num/dim)
-
-		for i := 0; i < num/dim; i++ {
+		for pbf.Pos < endpos {
 			if dim == 2 {
 				x += ReadSVarintPower(pbf, factor)
 				y += ReadSVarintPower(pbf, factor)
-				newlist[i] = []float64{Round(x, .5, 7), Round(y, .5, 7)}
+				newlist = append(newlist, []float64{Round(x, .5, 7), Round(y, .5, 7)})
 			} else if dim == 3 {
 				x += ReadSVarintPower(pbf, factor)
 				y += ReadSVarintPower(pbf, factor)
 				z += ReadSVarintPower(pbf, factor)
-				newlist[i] = []float64{Round(x, .5, 7), Round(y, .5, 7), Round(z, .5, 7)}
+				newlist = append(newlist, []float64{Round(x, .5, 7), Round(y, .5, 7), Round(z, .5, 7)})
 			}
 		}
 	} else {
-		newlist = make([][]float64, num/dim)
-
-		for i := 0; i < num/dim; i++ {
+		newlist = make([][]float64, num)
+		for i := 0; i < num; i++ {
 			if dim == 2 {
 				x += ReadSVarintPower(pbf, factor)
 				y += ReadSVarintPower(pbf, factor)
@@ -90,8 +82,7 @@ func ReadPolygon(pbf *pbf.Reader, endpos int, lengths []uint64, closed bool, fac
 	polygon := [][][]float64{}
 	if lengths == nil {
 		for pbf.Pos < endpos {
-			num := pbf.ReadVarint()
-			polygon = append(polygon, ReadLine(pbf, num, endpos, factor, dim, closed))
+			polygon = append(polygon, ReadLine(pbf, 0, endpos, factor, dim, closed))
 		}
 	} else {
 		for i := 0; i < len(lengths); i++ {
@@ -105,15 +96,7 @@ func ReadPolygon(pbf *pbf.Reader, endpos int, lengths []uint64, closed bool, fac
 func ReadMultiPolygon(pbf *pbf.Reader, endpos int, lengths []uint64, factor float64, dim int) [][][][]float64 {
 	multipolygon := [][][][]float64{}
 	if lengths == nil {
-		for pbf.Pos < endpos {
-			num_rings := pbf.ReadVarint()
-			polygon := make([][][]float64, num_rings)
-			for i := 0; i < num_rings; i++ {
-				num := pbf.ReadVarint()
-				polygon[i] = ReadLine(pbf, num, endpos, factor, dim, true)
-			}
-			multipolygon = append(multipolygon, polygon)
-		}
+		multipolygon = append(multipolygon, ReadPolygon(pbf, endpos, lengths, true, factor, dim))
 	} else {
 		var j = 1
 		for i := 0; i < int(lengths[0]); i++ {
@@ -255,7 +238,6 @@ func MakePolygon2(polygon [][][]float64, factor float64, dim int) ([]uint64, []i
 	geometry := []uint64{}
 	bb := []int64{}
 	for i, cont := range polygon {
-		geometry = append(geometry, uint64((len(cont)-1)*dim))
 
 		tmpgeom, tmpbb := MakeLine2(cont[:len(cont)-1], factor, dim)
 		geometry = append(geometry, tmpgeom...)
@@ -327,7 +309,6 @@ func WritePolygon(pbf *pbf.Writer, polygon [][][]float64, factor float64, dim in
 		if closed {
 			limit = 1
 		}
-		geometry = append(geometry, uint64((len(cont)-limit)*dim))
 
 		tmpgeom, tmpbb := MakeLine2(cont[:len(cont)-limit], factor, dim)
 		geometry = append(geometry, tmpgeom...)
