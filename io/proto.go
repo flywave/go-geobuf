@@ -73,7 +73,9 @@ func ReadLine(pbf *pbf.Reader, num int, endpos int, factor float64, dim int, clo
 	}
 
 	if closed {
-		newlist = append(newlist, newlist[0])
+		last := make([]float64, len(newlist[0]))
+		copy(last, newlist[0])
+		newlist = append(newlist, last)
 	}
 	return newlist
 }
