@@ -179,7 +179,7 @@ func readGeometryField(key pbf.TagType, val pbf.WireType, result interface{}, re
 	if key == GEOMETRY_TYPES && val == pbf.Varint {
 		ctx.geomtype = GeometryTypes[reader.ReadVarint()]
 	}
-	if key == GEOMETRY_LENGTHS && val == pbf.Varint {
+	if key == GEOMETRY_LENGTHS {
 		ctx.lengths = reader.ReadPackedUInt64()
 	}
 	if key == GEOMETRY_COORDS {

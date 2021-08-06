@@ -269,7 +269,6 @@ func WriteMultiPolygon(pbf *pbf.Writer, multipolygon [][][][]float64, factor flo
 	}
 
 	for _, polygon := range multipolygon {
-		geometry = append(geometry, uint64(len(polygon)))
 		tempgeom, tempbb := MakePolygon2(polygon, factor, dim)
 		geometry = append(geometry, tempgeom...)
 		if bb[0] > tempbb[0] {
