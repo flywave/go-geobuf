@@ -122,7 +122,7 @@ func ConvertPt(pt []float64, factor float64, dim int) []int64 {
 	} else if dim == 3 {
 		newpt := make([]int64, 3)
 		var z float64 = 0
-		if len(pt) < 3 {
+		if len(pt) > 2 {
 			z = float64(pt[2])
 		}
 		newpt[0] = int64(pt[0] * factor)
