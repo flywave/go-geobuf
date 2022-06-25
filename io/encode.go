@@ -22,7 +22,7 @@ type Encode struct {
 }
 
 func NewEncode(obj interface{}) *Encode {
-	d := &Encode{Keys: make(map[string]int), KeysNum: 0, KeysArr: make([]string, 0), Dim: 2, Factor: math.Pow(10.0, 7.0), writer: pbf.NewWriter()}
+	d := &Encode{Keys: make(map[string]int), KeysNum: 0, KeysArr: make([]string, 0), Dim: 3, Factor: math.Pow(10.0, 7.0), writer: pbf.NewWriter()}
 	d.writeDataField(obj)
 	return d
 }
