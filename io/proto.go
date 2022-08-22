@@ -261,16 +261,14 @@ func WriteMultiPolygon(pbf *pbf.Writer, multipolygon [][][][]float64, factor flo
 	bb := []int64{int64(west), int64(south), int64(east), int64(north)}
 	l := len(multipolygon)
 
-	if l != 1 {
-		var lengths = []uint64{uint64(l)}
-		for i := 0; i < l; i++ {
-			lengths = append(lengths, uint64(len(multipolygon[i])))
-			for j := 0; j < len(multipolygon[i]); j++ {
-				lengths = append(lengths, uint64(len(multipolygon[i][j])-1))
-			}
+	var lengths = []uint64{uint64(l)}
+	for i := 0; i < l; i++ {
+		lengths = append(lengths, uint64(len(multipolygon[i])))
+		for j := 0; j < len(multipolygon[i]); j++ {
+			lengths = append(lengths, uint64(len(multipolygon[i][j])-1))
 		}
-		pbf.WritePackedUInt64(GEOMETRY_LENGTHS, lengths)
 	}
+	pbf.WritePackedUInt64(GEOMETRY_LENGTHS, lengths)
 
 	for _, polygon := range multipolygon {
 		tempgeom, tempbb := MakePolygon2(polygon, factor, dim)
