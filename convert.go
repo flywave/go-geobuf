@@ -101,8 +101,6 @@ func AddFeatures(geobuf *Writer, feats []string, count int, s time.Time) int {
 				} else {
 					if feat.Geometry != nil {
 						geobuf.WriteFeature(feat)
-					} else {
-						fmt.Println(feat)
 					}
 				}
 			}
@@ -111,7 +109,6 @@ func AddFeatures(geobuf *Writer, feats []string, count int, s time.Time) int {
 	}
 	wg.Wait()
 	count += len(feats)
-	fmt.Printf("\r%d features created from raw geojson string in %s", count, time.Now().Sub(s))
 	return count
 }
 
