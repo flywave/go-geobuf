@@ -172,14 +172,18 @@ func MapGeobuf(infile string, newfile string, mapfunc MapFunc) {
 	}
 }
 
-func GeobufFrmCollection(infile string, outfile string) {
+func GeobufFrmCollection(infile string, outfile string) error {
 	geobuf, _ := os.Create(outfile)
 	f, _ := os.Open(infile)
 	bt, _ := ioutil.ReadAll(f)
-	fc, _ := general.UnmarshalFeatureCollection(bt)
+	fc, err := general.UnmarshalFeatureCollection(bt)
+	if err != nil {
+		return err
+	}
 	bt = io.WriteFeatureCollection(fc)
 	geobuf.Write(bt)
 	geobuf.Close()
+	return nil
 }
 
 func GeobufToCollection(infile string, outfile string) {
