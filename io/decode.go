@@ -42,11 +42,11 @@ func readDataField(key pbf.TagType, tp pbf.WireType, res interface{}, reader *pb
 			}
 		}
 		if len(bboxs) != 0 {
-			d.featureCollection.BoundingBox = ExpandBBoxs(bboxs)
+			d.featureCollection.BoundingBox = (*geom.BoundingBox)(ToGeomBBox(ExpandBBoxs(bboxs)))
 		}
 	} else if key == DATA_TYPE_FEATURE {
 		d.feature = d.readFeature()
-		d.feature.BoundingBox = CaclBBoxs(d.feature.Geometry)
+		d.feature.BoundingBox = (*geom.BoundingBox)(ToGeomBBox(CaclBBoxs(d.feature.Geometry)))
 	} else if key == DATA_TYPE_GEOMETRY {
 		d.geometry, _ = d.readGeometry()
 	}

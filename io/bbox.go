@@ -71,6 +71,13 @@ func ExpandBBoxs(bboxs [][]float64) []float64 {
 	return bbox
 }
 
+func ToGeomBBox(bbox []float64) *[2][3]float64 {
+	if len(bbox) == 4 {
+		return &[2][3]float64{{bbox[0], bbox[1]}, {bbox[2], bbox[3]}}
+	}
+	return &[2][3]float64{{bbox[0], bbox[1], bbox[2]}, {bbox[3], bbox[4], bbox[5]}}
+}
+
 func BBoxPointGeometry(pt []float64) []float64 {
 	return []float64{pt[0], pt[1], pt[0], pt[1]}
 }
