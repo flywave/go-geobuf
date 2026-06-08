@@ -26,6 +26,7 @@ type Reader struct {
 	MetaDataBool bool
 	SubFileEnd   int
 	FeatureCount int
+	err          error
 }
 
 type SubFile struct {
@@ -51,7 +52,9 @@ func (metadata *MetaData) LintMetaData(pos int) {
 func ReaderBuf(bytevals []byte) *Reader {
 	buffer := bytes.NewReader(bytevals)
 	buf := &Reader{Reader: pbf.NewScanner(buffer), Buf: bytevals, FileBool: false}
-	buf.CheckMetaData()
+	if buf.Reader != nil {
+		buf.CheckMetaData()
+	}
 	buf.FeatureCount = 0
 	return buf
 }
@@ -59,7 +62,7 @@ func ReaderBuf(bytevals []byte) *Reader {
 func ReaderFile(filename string) *Reader {
 	file, err := os.Open(filename)
 	if err != nil {
-		fmt.Println(err)
+		return &Reader{err: err}
 	}
 	reader := bufio.NewReader(file)
 
@@ -69,38 +72,62 @@ func ReaderFile(filename string) *Reader {
 		FileBool: true,
 		File:     file,
 	}
-	buf.CheckMetaData()
+	if buf.Reader != nil {
+		buf.CheckMetaData()
+	}
 	buf.FeatureCount = 0
 	return buf
 }
 
 func (reader *Reader) Next() bool {
+	if reader.err != nil || reader.Reader == nil {
+		return false
+	}
 	reader.FeatureCount++
 	return reader.Reader.Scan()
 }
 
 func (reader *Reader) Bytes() []byte {
+	if reader.Reader == nil {
+		return nil
+	}
 	return reader.Reader.Protobuf()
 }
 
 func (reader *Reader) BytesIndicies() ([]byte, [2]int) {
+	if reader.Reader == nil {
+		return nil, [2]int{}
+	}
 	return reader.Reader.ProtobufIndicies()
 }
 
 func (reader *Reader) Feature() *geom.Feature {
-	return io.ReadFeature(reader.Bytes())
+	bytevals := reader.Bytes()
+	if bytevals == nil {
+		return nil
+	}
+	return io.ReadFeature(bytevals)
 }
 
 func (reader *Reader) FeatureIndicies() (*geom.Feature, [2]int) {
 	bytevals, indicies := reader.BytesIndicies()
+	if bytevals == nil {
+		return nil, indicies
+	}
 	return io.ReadFeature(bytevals), indicies
 }
 
 func ReadFeature(bytevals []byte) *geom.Feature {
+	if bytevals == nil {
+		return nil
+	}
 	return io.ReadFeature(bytevals)
 }
 
 func ReadBoundingBox(bytevals []byte, factor float64) []float64 {
+	if len(bytevals) == 0 {
+		return nil
+	}
 	pos := len(bytevals) - 1
 	alloc := make([]byte, 32)
 	allocpos := 31
@@ -132,14 +159,25 @@ func (reader *Reader) ReadAll() []*geom.Feature {
 }
 
 func (reader *Reader) Reset() {
+	if reader.err != nil {
+		return
+	}
 	if reader.FileBool {
 		file, err := os.Open(reader.Filename)
 		if err != nil {
-			fmt.Println(err)
+			reader.err = err
+			return
 		}
+		if reader.File != nil {
+			reader.File.Close()
+		}
+		reader.File = file
 		read := bufio.NewReader(file)
 		reader.Reader = pbf.NewScanner(read)
 	} else {
+		if reader.Buf == nil {
+			return
+		}
 		buffer := bytes.NewReader(reader.Buf)
 		reader.Reader = pbf.NewScanner(buffer)
 	}
@@ -151,6 +189,9 @@ func (reader *Reader) Reset() {
 }
 
 func (reader *Reader) ReadIndAppend(inds [2]int) []byte {
+	if reader.File == nil || reader.err != nil {
+		return nil
+	}
 	inds[0] = inds[0] - len(pbf.EncodeVarint(uint64(inds[1]-inds[0]))) - 1
 	bytevals := make([]byte, inds[1]-inds[0])
 	reader.File.ReadAt(bytevals, int64(inds[0]))
@@ -158,24 +199,39 @@ func (reader *Reader) ReadIndAppend(inds [2]int) []byte {
 }
 
 func (reader *Reader) ReadIndFeature(inds [2]int) *geom.Feature {
+	if reader.File == nil || reader.err != nil {
+		return nil
+	}
 	bytevals := make([]byte, inds[1]-inds[0])
 	reader.File.ReadAt(bytevals, int64(inds[0]))
 	return ReadFeature(bytevals)
 }
 
 func (reader *Reader) ReadIndicies(inds [2]int) []byte {
+	if reader.File == nil || reader.err != nil {
+		return nil
+	}
 	bytevals := make([]byte, inds[1]-inds[0])
 	reader.File.ReadAt(bytevals, int64(inds[0]))
 	return bytevals
 }
 
 func (reader *Reader) Seek(pos int) {
+	if reader.err != nil {
+		return
+	}
 	if reader.FileBool {
+		if reader.File == nil {
+			return
+		}
 		reader.File.Seek(int64(pos), 0)
 		myreader := bufio.NewReader(reader.File)
 		reader.Reader = pbf.NewScanner(myreader)
 		reader.Reader.TotalPosition = pos
 	} else {
+		if reader.Buf == nil {
+			return
+		}
 		buffer := bytes.NewReader(reader.Buf)
 		buffer.Seek(int64(pos), 0)
 		reader.Reader = pbf.NewScanner(buffer)
@@ -190,7 +246,7 @@ func WriteMetaData(meta MetaData) interface{} {
 	if err != nil {
 		fmt.Println(err)
 	}
-	return string(bb.Bytes())
+	return bb.String()
 }
 
 func ReadMetaData(bytevals []byte) MetaData {
@@ -204,27 +260,43 @@ func ReadMetaData(bytevals []byte) MetaData {
 }
 
 func (reader *Reader) CheckMetaData() {
+	if reader.Reader == nil {
+		return
+	}
 	reader.Next()
 	feature := reader.Feature()
+	if feature == nil {
+		return
+	}
 	_, boolval := feature.Properties["metadata"]
 	if len(feature.Properties) == 1 && boolval {
-		bytevals := []byte(feature.Properties["metadata"].(string))
-		reader.MetaData = ReadMetaData(bytevals)
-		reader.MetaData.LintMetaData(reader.Reader.TotalPosition)
-		reader.MetaDataBool = true
-		reader.FeatureCount = 0
+		if str, ok := feature.Properties["metadata"].(string); ok {
+			bytevals := []byte(str)
+			reader.MetaData = ReadMetaData(bytevals)
+			reader.MetaData.LintMetaData(reader.Reader.TotalPosition)
+			reader.MetaDataBool = true
+			reader.FeatureCount = 0
+		} else {
+			reader.Reset()
+		}
 	} else {
 		reader.Reset()
 	}
 }
 
 func (reader *Reader) SubFileSeek(key string) {
+	if reader.err != nil || reader.MetaData.Files == nil {
+		return
+	}
 	subfile := reader.MetaData.Files[key]
 	reader.Seek(subfile.Positions[0])
 	reader.SubFileEnd = subfile.Positions[1]
 }
 
 func (reader *Reader) SubFileBytes(key string) *Reader {
+	if reader.err != nil || reader.MetaData.Files == nil {
+		return ReaderBuf([]byte{})
+	}
 	subfile, boolval := reader.MetaData.Files[key]
 	if boolval {
 		return ReaderBuf(reader.ReadIndicies(subfile.Positions))
@@ -233,9 +305,18 @@ func (reader *Reader) SubFileBytes(key string) *Reader {
 }
 
 func (reader *Reader) SubFileNext() bool {
+	if reader.err != nil || reader.Reader == nil {
+		return false
+	}
 	return reader.Reader.Scan() && reader.Reader.TotalPosition < reader.SubFileEnd
 }
 
 func (reader *Reader) Close() {
-	reader.File.Close()
+	if reader.File != nil {
+		reader.File.Close()
+	}
+}
+
+func (reader *Reader) Err() error {
+	return reader.err
 }

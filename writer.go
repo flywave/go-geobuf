@@ -9,7 +9,6 @@ import (
 	"github.com/flywave/go-pbf"
 
 	"bytes"
-	"fmt"
 	"io/ioutil"
 )
 
@@ -20,6 +19,7 @@ type Writer struct {
 	Buffer    *bytes.Buffer
 	File      *os.File
 	Bytesvals []byte
+	err       error
 }
 
 var writersize = 64 * 4096
@@ -27,7 +27,7 @@ var writersize = 64 * 4096
 func WriterFileNew(filename string) *Writer {
 	file, err := os.Create(filename)
 	if err != nil {
-		fmt.Println(err)
+		return &Writer{err: err}
 	}
 	return &Writer{Filename: filename, FileBool: true, File: file, Bytesvals: []byte{}}
 }
@@ -35,22 +35,25 @@ func WriterFileNew(filename string) *Writer {
 func WriterFile(filename string) *Writer {
 	file, err := os.OpenFile(filename, os.O_APPEND|os.O_RDWR, os.ModeAppend)
 	if err != nil {
-		fmt.Println(err)
+		return &Writer{err: err}
 	}
 	return &Writer{Filename: filename, FileBool: true, File: file}
 }
 
 func WriterBufNew() *Writer {
 	b := bytes.NewBuffer([]byte{})
-	return &Writer{Writer: bufio.NewWriterSize(b, writersize), Buffer: b, FileBool: false}
+	return &Writer{Writer: bufio.NewWriterSize(b, writersize), Buffer: b, FileBool: false, File: nil}
 }
 
 func WriterBuf(bytevals []byte) *Writer {
 	buffer := bytes.NewBuffer(bytevals)
-	return &Writer{Writer: bufio.NewWriterSize(buffer, writersize), Buffer: buffer, FileBool: false}
+	return &Writer{Writer: bufio.NewWriterSize(buffer, writersize), Buffer: buffer, FileBool: false, File: nil}
 }
 
 func (writer *Writer) WriteFeature(feature *geom.Feature) {
+	if writer.err != nil {
+		return
+	}
 	bytevals := io.WriteFeature(feature)
 
 	bytevals = append(
@@ -66,6 +69,9 @@ func (writer *Writer) WriteFeature(feature *geom.Feature) {
 }
 
 func (writer *Writer) WriteRaw(bytevals []byte) {
+	if writer.err != nil {
+		return
+	}
 	bytevals = append(
 		append(
 			[]byte{10}, pbf.EncodeVarint(uint64(len(bytevals)))...,
@@ -79,6 +85,9 @@ func (writer *Writer) WriteRaw(bytevals []byte) {
 }
 
 func (writer *Writer) AddGeobuf(buf *Writer) {
+	if writer.err != nil {
+		return
+	}
 	if !writer.FileBool {
 		writer.Writer.Flush()
 	}
@@ -93,28 +102,48 @@ func (writer *Writer) AddGeobuf(buf *Writer) {
 }
 
 func (writer *Writer) Bytes() []byte {
-	writer.Writer.Flush()
+	if writer.err != nil {
+		return nil
+	}
+	if writer.Writer != nil {
+		writer.Writer.Flush()
+	}
 
 	if !writer.FileBool {
-		return writer.Buffer.Bytes()
+		if writer.Buffer != nil {
+			return writer.Buffer.Bytes()
+		}
+		return nil
 	} else {
-		writer.File.Close()
+		writer.File.Sync()
 		bytevals, _ := ioutil.ReadFile(writer.Filename)
 		return bytevals
 	}
 }
 
 func (writer *Writer) Reader() *Reader {
+	if writer.err != nil {
+		return ReaderBuf(nil)
+	}
+	if writer.Writer != nil {
+		writer.Writer.Flush()
+	}
 	if !writer.FileBool {
 		newreader := ReaderBuf(writer.Bytes())
 		return newreader
 	} else {
-		writer.File.Close()
+		writer.File.Sync()
 		newreader := ReaderFile(writer.Filename)
 		return newreader
 	}
 }
 
 func (writer *Writer) Close() {
-	writer.File.Close()
+	if writer.File != nil {
+		writer.File.Close()
+	}
+}
+
+func (writer *Writer) Err() error {
+	return writer.err
 }

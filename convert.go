@@ -21,11 +21,20 @@ type GeojsonFile struct {
 }
 
 func NewGeojson(filename string) GeojsonFile {
-	file, _ := os.Open(filename)
+	file, err := os.Open(filename)
+	if err != nil {
+		return GeojsonFile{}
+	}
 
-	bytevals := make([]byte, 100)
+	bufsize := 4096
+	bytevals := make([]byte, bufsize)
 
-	file.ReadAt(bytevals, int64(0))
+	n, err := file.ReadAt(bytevals, 0)
+	if err != nil && n == 0 {
+		return GeojsonFile{File: file}
+	}
+	bytevals = bytevals[:n]
+
 	boolval := false
 	var startpos int
 	for ii, i := range string(bytevals) {
@@ -39,14 +48,27 @@ func NewGeojson(filename string) GeojsonFile {
 }
 
 func (geojsonfile *GeojsonFile) ReadChunk(size int) []string {
-	var bytevals []byte
-	if size > int(geojsonfile.Pos)+10000000 {
-		bytevals = make([]byte, 10000000)
-	} else {
-		bytevals = make([]byte, size-int(geojsonfile.Pos))
+	if geojsonfile.File == nil {
+		return nil
 	}
 
-	geojsonfile.File.ReadAt(bytevals, geojsonfile.Pos)
+	remaining := size - int(geojsonfile.Pos)
+	chunkSize := remaining
+	if chunkSize <= 0 {
+		return nil
+	}
+	if chunkSize > 10000000 {
+		chunkSize = 10000000
+	}
+
+	bytevals := make([]byte, chunkSize)
+
+	n, err := geojsonfile.File.ReadAt(bytevals, geojsonfile.Pos)
+	if err != nil && n == 0 {
+		return nil
+	}
+	bytevals = bytevals[:n]
+
 	debt := 0
 	newlist := []int{}
 	boolval := false
@@ -91,9 +113,13 @@ func (geojsonfile *GeojsonFile) ReadChunk(size int) []string {
 
 func AddFeatures(geobuf *Writer, feats []string, count int, s time.Time) int {
 	var wg sync.WaitGroup
+	sem := make(chan struct{}, 100)
 	for _, i := range feats {
 		wg.Add(1)
+		sem <- struct{}{}
 		go func(i string) {
+			defer wg.Done()
+			defer func() { <-sem }()
 			if len(i) > 0 {
 				feat, err := general.UnmarshalFeature([]byte(i))
 				if err != nil {
@@ -104,7 +130,6 @@ func AddFeatures(geobuf *Writer, feats []string, count int, s time.Time) int {
 					}
 				}
 			}
-			wg.Done()
 		}(i)
 	}
 	wg.Wait()
@@ -116,6 +141,7 @@ func GetFilesize(filename string) int {
 	fi, err := os.Stat(filename)
 	if err != nil {
 		fmt.Println(err)
+		return 0
 	}
 
 	size := fi.Size()
@@ -125,6 +151,9 @@ func GetFilesize(filename string) int {
 func ConvertGeojson(infile string, outfile string) {
 	s := time.Now()
 	size := GetFilesize(infile)
+	if size == 0 {
+		return
+	}
 
 	geobuf := WriterFileNew(outfile)
 	geojsonfile := NewGeojson(infile)
@@ -143,21 +172,25 @@ func ConvertGeobuf(infile string, outfile string) {
 	file, err := os.Create(outfile)
 	if err != nil {
 		fmt.Println(err)
+		return
 	}
 	file.WriteString(`{"type": "FeatureCollection", "features": [`)
 
+	first := true
 	for geobuf.Next() {
 		feature := geobuf.Feature()
-		s, _ := feature.MarshalJSON()
-		if geobuf.Next() {
-			file.Write(append(s, 44))
-
-		} else {
-			file.Write(s)
-
+		if feature == nil {
+			continue
 		}
+		s, _ := feature.MarshalJSON()
+		if !first {
+			file.Write([]byte{','})
+		}
+		file.Write(s)
+		first = false
 	}
 	file.WriteString("]}")
+	file.Close()
 }
 
 type MapFunc func(feature *geom.Feature) *geom.Feature
@@ -167,31 +200,61 @@ func MapGeobuf(infile string, newfile string, mapfunc MapFunc) {
 	geobuf2 := WriterFileNew(newfile)
 	for geobuf.Next() {
 		feature := geobuf.Feature()
-		feature = mapfunc(feature)
-		geobuf2.WriteFeature(feature)
+		if feature != nil {
+			feature = mapfunc(feature)
+			geobuf2.WriteFeature(feature)
+		}
 	}
 }
 
 func GeobufFrmCollection(infile string, outfile string) error {
-	geobuf, _ := os.Create(outfile)
-	f, _ := os.Open(infile)
-	bt, _ := ioutil.ReadAll(f)
+	geobuf, err := os.Create(outfile)
+	if err != nil {
+		return err
+	}
+	defer geobuf.Close()
+
+	f, err := os.Open(infile)
+	if err != nil {
+		return err
+	}
+	defer f.Close()
+
+	bt, err := ioutil.ReadAll(f)
+	if err != nil {
+		return err
+	}
+
 	fc, err := general.UnmarshalFeatureCollection(bt)
 	if err != nil {
 		return err
 	}
 	bt = io.WriteFeatureCollection(fc)
-	geobuf.Write(bt)
-	geobuf.Close()
-	return nil
+	_, err = geobuf.Write(bt)
+	return err
 }
 
 func GeobufToCollection(infile string, outfile string) {
-	f, _ := os.Open(infile)
-	bts, _ := ioutil.ReadAll(f)
+	f, err := os.Open(infile)
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
+	defer f.Close()
+
+	bts, err := ioutil.ReadAll(f)
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
+
 	fc := io.ReadFeatureCollection(bts)
-	file, _ := os.Create(outfile)
+	file, err := os.Create(outfile)
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
+	defer file.Close()
 	bt, _ := fc.MarshalJSON()
 	file.Write(bt)
-	file.Close()
 }

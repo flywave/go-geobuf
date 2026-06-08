@@ -250,6 +250,7 @@ func readGeometryField(key pbf.TagType, val pbf.WireType, result interface{}, re
 
 func (d *Decode) readGeometry() (geom.Geometry, map[string]interface{}) {
 	ctx := d.getReaderContext()
+	ctx.featureCollection = &geom.FeatureCollection{}
 	d.reader.ReadMessage(readFeatureCollectionField, ctx.featureCollection)
 	return ctx.geometry, ctx.properties
 }
